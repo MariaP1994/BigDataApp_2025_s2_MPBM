@@ -4,7 +4,7 @@ import hashlib
 from typing import Dict, List, Optional
 
 class MongoDB:
-    def __init__(self, uri: str, db_name: str):
+    def _init_(self, uri: str, db_name: str):
         """Inicializa conexión a MongoDB"""
         self.client = MongoClient(uri)
         self.db = self.client[db_name]

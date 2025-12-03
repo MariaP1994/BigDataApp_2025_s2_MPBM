@@ -188,10 +188,14 @@
 
     // ---------- RESULTADOS ----------
     function mostrarResultados(data) {
+        // total viene de Elastic.buscar -> 'total'
         document.getElementById("totalResultados").textContent = data.total || 0;
 
+        // si vienes de Elastic.buscar usas 'aggs' (resultado de agregaciones del servidor)
         mostrarAggregations(data.aggs || {});
-        ultimaBusqueda = data.hits || [];
+
+        // aquí es donde ajustamos: tu backend usa 'resultados', no 'hits'
+        ultimaBusqueda = data.resultados || data.hits || [];
         mostrarHits(ultimaBusqueda);
 
         document.getElementById("divResultados").style.display = "block";
@@ -207,6 +211,10 @@
             return;
         }
 
+        // NOTA:
+        // Si en tu backend defines otras agregaciones (por ejemplo boletines_por_anio, boletines_por_semana),
+        // aquí cambias los nombres. De momento dejo los mismos nombres que tenías.
+
         // Cuentos por mes
         if (aggs.cuentos_por_mes && aggs.cuentos_por_mes.buckets) {
             const divMes = document.createElement("div");
@@ -221,8 +229,8 @@
                     .toLocaleDateString("es-ES", { year: "numeric", month: "long" });
 
                 const li = document.createElement("li");
-                // SIN backticks, solo concatenación:
-                li.innerHTML = fecha +
+                li.innerHTML =
+                    fecha +
                     ' <span class="badge bg-primary">' +
                     b.doc_count +
                     "</span>";
@@ -241,7 +249,8 @@
 
             aggs.cuentos_por_autor.buckets.forEach(function(b) {
                 const li = document.createElement("li");
-                li.innerHTML = b.key +
+                li.innerHTML =
+                    b.key +
                     ' <span class="badge bg-success">' +
                     b.doc_count +
                     "</span>";
@@ -264,10 +273,31 @@
         hits.forEach(function(hit, i) {
             const src = hit._source || {};
 
-            let vista = src.contenido || src.texto || JSON.stringify(src);
-            if (vista.length > 200) {
-                vista = vista.substring(0, 200) + "...";
+            // Vista corta pensada para tus boletines:
+            // primero tratamos de mostrar algo tipo: "Semana 12 - 2023 | Tema central ..."
+            let vistaPrincipal = "";
+
+            if (src.semana_epi || src.anio) {
+                vistaPrincipal += "Semana " + (src.semana_epi || "?");
+                if (src.anio) {
+                    vistaPrincipal += " - " + src.anio;
+                }
+                if (src.tema_central) {
+                    vistaPrincipal += " | " + src.tema_central;
+                }
+            } else if (src.tema_central) {
+                vistaPrincipal = src.tema_central;
             }
+
+            // Si no hay nada de eso, cae a contenido/texto/JSON completo
+            let vistaDetalle = src.contenido || src.texto || JSON.stringify(src);
+            if (vistaDetalle.length > 200) {
+                vistaDetalle = vistaDetalle.substring(0, 200) + "...";
+            }
+
+            const vistaFinal = vistaPrincipal
+                ? vistaPrincipal + "<br><small>" + vistaDetalle + "</small>"
+                : vistaDetalle;
 
             const row = document.createElement("tr");
             row.innerHTML =
@@ -276,7 +306,7 @@
                 "<td>" + (hit._score ? hit._score.toFixed(4) : "N/A") + "</td>" +
                 "<td><small>" + (hit._index || "") + "</small></td>" +
                 "<td>" +
-                    "<div class='json-view'>" + vista + "</div>" +
+                    "<div class='json-view'>" + vistaFinal + "</div>" +
                     "<button class='btn btn-sm btn-link mt-1' " +
                         "onclick='mostrarDetalle(" + i + ")' " +
                         "data-bs-toggle='modal' data-bs-target='#modalDetalle'>" +
