@@ -1,18 +1,39 @@
-from flask import Flask, render_template, request, redirect, url_for,jsonify, session, flash
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session, flash
 from dotenv import load_dotenv
 import os
 from Helpers import MongoDB, ElasticSearch, Funciones, WebScraping
 
-# Cargar variables de entorno
+# ================= CARGAR VARIABLES DE ENTORNO =================
+# Si tu archivo se llama "env.txt", dejamos esto así:
 load_dotenv()
+# Si más adelante lo renombraras a ".env", solo cambias por: load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'Mpbm1234')
 
-# Configuración MongoDB
-MONGO_URI = os.getenv('MONGO_URI')
-MONGO_DB = os.getenv('MONGO_DB')
-MONGO_COLECCION = os.getenv('MONGO_COLECCION', 'usuario_roles')
+# --------- LEER VARIABLES (con valores por defecto para evitar None) ---------
+MONGO_URI        = os.getenv("MONGO_URI")
+MONGO_DB         = os.getenv("MONGO_DB") or "proyecto_bigdata"
+MONGO_COLECCION  = os.getenv("MONGO_COLECCION") or "usuario_roles"
+
+ELASTIC_CLOUD_URL     = os.getenv("ELASTIC_CLOUD_URL")
+ELASTIC_API_KEY       = os.getenv("ELASTIC_API_KEY")
+ELASTIC_INDEX_DEFAULT = os.getenv("ELASTIC_INDEX_DEFAULT") or "index_cuentos"
+
+app.secret_key   = os.getenv("SECRET_KEY") or "Mpbm1234"
+
+# DEBUG TEMPORAL (solo para ver qué está leyendo, luego lo puedes borrar)
+print("DEBUG MONGO_URI:", repr(MONGO_URI))
+print("DEBUG MONGO_DB:", repr(MONGO_DB))
+print("DEBUG MONGO_COLECCION:", repr(MONGO_COLECCION))
+print("DEBUG ELASTIC_CLOUD_URL:", repr(ELASTIC_CLOUD_URL))
+print("DEBUG ELASTIC_INDEX_DEFAULT:", repr(ELASTIC_INDEX_DEFAULT))
+
+# ================= INICIALIZAR CONEXIONES =================
+mongo   = MongoDB(MONGO_URI, MONGO_DB)
+elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
+
+print("DEBUG MONGO_URI:", MONGO_URI)
+print("DEBUG MONGO_DB:", MONGO_DB)
 
 
 # Configuración ElasticSearch Cloud

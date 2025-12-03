@@ -2,16 +2,15 @@ import os
 import zipfile
 import requests
 import json
-import PyPDF2
-from PIL import Image
-import pytesseract
 from typing import Dict, List
-from werkzeug.utils import secure_filename
 from datetime import datetime
 import shutil
 
 
 class Funciones:
+    # ==========================================================
+    # CARPETAS / ARCHIVOS
+    # ==========================================================
     @staticmethod
     def crear_carpeta(ruta: str) -> bool:
         """Crea una carpeta si no existe"""
@@ -24,6 +23,37 @@ class Funciones:
             return False
 
     @staticmethod
+    def borrar_contenido_carpeta(ruta: str) -> bool:
+        """
+        Borra el contenido de una carpeta sin eliminar la carpeta misma
+        """
+        try:
+            if not os.path.exists(ruta):
+                return True  # Si no existe, no hay nada que borrar
+
+            if not os.path.isdir(ruta):
+                return False  # No es una carpeta
+
+            for item in os.listdir(ruta):
+                item_path = os.path.join(ruta, item)
+                try:
+                    if os.path.isfile(item_path) or os.path.islink(item_path):
+                        os.unlink(item_path)
+                    elif os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+                except Exception as e:
+                    print(f"Error al eliminar {item_path}: {e}")
+                    return False
+
+            return True
+        except Exception as e:
+            print(f"Error al borrar contenido de carpeta: {e}")
+            return False
+
+    # ==========================================================
+    # ZIP
+    # ==========================================================
+    @staticmethod
     def descomprimir_zip_local(ruta_file_zip: str, ruta_descomprimir: str) -> List[Dict]:
         """Descomprime un archivo ZIP y retorna info de archivos"""
         archivos = []
@@ -31,7 +61,6 @@ class Funciones:
             with zipfile.ZipFile(ruta_file_zip, 'r') as zip_ref:
                 for file_info in zip_ref.namelist():
                     if not file_info.endswith('/'):
-                        # Extraer carpeta padre
                         carpeta = os.path.dirname(file_info)
                         nombre_archivo = os.path.basename(file_info)
                         extension = os.path.splitext(nombre_archivo)[1].lower()
@@ -57,7 +86,6 @@ class Funciones:
         try:
             Funciones.crear_carpeta(carpeta_destino)
 
-            # Descargar archivo
             response = requests.get(url, stream=True)
             zip_path = os.path.join(carpeta_destino, 'temp.zip')
 
@@ -65,10 +93,7 @@ class Funciones:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
 
-            # Descomprimir
             archivos = Funciones.descomprimir_zip_local(zip_path, carpeta_destino)
-
-            # Eliminar ZIP temporal
             os.remove(zip_path)
 
             return archivos
@@ -81,53 +106,17 @@ class Funciones:
         """Verifica si un archivo tiene extensión permitida"""
         return '.' in filename and filename.rsplit('.', 1)[1].lower() in extensions
 
-    @staticmethod
-    def borrar_contenido_carpeta(ruta: str) -> bool:
-        """
-        Borra el contenido de una carpeta sin eliminar la carpeta misma
-
-        Args:
-            ruta: Ruta de la carpeta a limpiar
-
-        Returns:
-            True si se borró correctamente, False en caso de error
-        """
-        try:
-            if not os.path.exists(ruta):
-                return True  # Si no existe, no hay nada que borrar
-
-            if not os.path.isdir(ruta):
-                return False  # No es una carpeta
-
-            # Eliminar todos los archivos y subcarpetas dentro
-            for item in os.listdir(ruta):
-                item_path = os.path.join(ruta, item)
-                try:
-                    if os.path.isfile(item_path) or os.path.islink(item_path):
-                        os.unlink(item_path)  # Eliminar archivo o enlace simbólico
-                    elif os.path.isdir(item_path):
-                        shutil.rmtree(item_path)  # Eliminar directorio y su contenido
-                except Exception as e:
-                    print(f"Error al eliminar {item_path}: {e}")
-                    return False
-
-            return True
-        except Exception as e:
-            print(f"Error al borrar contenido de carpeta: {e}")
-            return False
-
+    # ==========================================================
+    # PDF → TEXTO
+    # ==========================================================
     @staticmethod
     def extraer_texto_pdf(ruta_pdf: str) -> str:
         """
-        Extrae texto de un archivo PDF
-
-        Args:
-            ruta_pdf: Ruta del archivo PDF
-
-        Returns:
-            Texto extraído del PDF
+        Extrae texto de un archivo PDF (no escaneado)
         """
         try:
+            import PyPDF2  # import lazy
+
             texto = ""
             with open(ruta_pdf, 'rb') as file:
                 pdf_reader = PyPDF2.PdfReader(file)
@@ -143,22 +132,15 @@ class Funciones:
     def extraer_texto_pdf_ocr(ruta_pdf: str) -> str:
         """
         Extrae texto de un PDF usando OCR (útil para PDFs escaneados)
-
-        Args:
-            ruta_pdf: Ruta del archivo PDF
-
-        Returns:
-            Texto extraído usando OCR
         """
         try:
-            from pdf2image import convert_from_path
+            from pdf2image import convert_from_path   # lazy import
+            import pytesseract                        # lazy import
 
-            # Convertir PDF a imágenes
             images = convert_from_path(ruta_pdf)
 
             texto = ""
-            for i, image in enumerate(images):
-                # Aplicar OCR a cada página
+            for image in images:
                 texto += pytesseract.image_to_string(image, lang='spa') + "\n"
 
             return texto.strip()
@@ -166,16 +148,13 @@ class Funciones:
             print(f"Error al extraer texto con OCR del PDF {ruta_pdf}: {e}")
             return ""
 
+    # ==========================================================
+    # JSON – UTILIDADES GENERALES
+    # ==========================================================
     @staticmethod
     def listar_archivos_json(ruta_carpeta: str) -> List[Dict]:
         """
         Lista todos los archivos JSON en una carpeta
-
-        Args:
-            ruta_carpeta: Ruta de la carpeta a explorar
-
-        Returns:
-            Lista de diccionarios con información de cada archivo JSON
         """
         archivos_json = []
         try:
@@ -197,17 +176,38 @@ class Funciones:
             return []
 
     @staticmethod
+    def leer_json(ruta_json: str) -> Dict:
+        """Lee un archivo JSON y retorna su contenido"""
+        try:
+            with open(ruta_json, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error al leer JSON {ruta_json}: {e}")
+            return {}
+
+    @staticmethod
+    def guardar_json(ruta_json: str, datos: Dict) -> bool:
+        """Guarda datos en un archivo JSON"""
+        try:
+            directorio = os.path.dirname(ruta_json)
+            if directorio:
+                Funciones.crear_carpeta(directorio)
+
+            with open(ruta_json, 'w', encoding='utf-8') as f:
+                json.dump(datos, f, indent=4, ensure_ascii=False)
+            return True
+        except Exception as e:
+            print(f"Error al guardar JSON: {e}")
+            return False
+
+    # ==========================================================
+    # LISTAR ARCHIVOS GENERALES
+    # ==========================================================
+    @staticmethod
     def listar_archivos_carpeta(ruta_carpeta: str,
                                 extensiones: List[str] = None) -> List[Dict]:
         """
         Lista archivos en una carpeta con extensiones específicas
-
-        Args:
-            ruta_carpeta: Ruta de la carpeta
-            extensiones: Lista de extensiones a filtrar (ej: ['pdf', 'txt'])
-
-        Returns:
-            Lista de diccionarios con información de archivos
         """
         archivos = []
         try:
@@ -232,45 +232,81 @@ class Funciones:
             print(f"Error al listar archivos: {e}")
             return []
 
+    # ==========================================================
+    # FUNCIONES ESPECÍFICAS PARA TUS BOLETINES (JSON)
+    # ==========================================================
     @staticmethod
-    def leer_json(ruta_json: str) -> Dict:
+    def cargar_boletines_desde_carpeta(ruta_carpeta: str) -> List[Dict]:
         """
-        Lee un archivo JSON y retorna su contenido
+        Carga TODOS los boletines a partir de los .json en una carpeta.
+        
+        Pensado para tus JSON del BES, por ejemplo con estructura:
+        {
+          "anio": 2025,
+          "semana": 47,
+          "fecha_inicio": "2025-11-16",
+          "fecha_fin": "2025-11-22",
+          "tema_central": "...",
+          "expertos_tematicos": ["nombre1", "nombre2"],
+          "archivo_pdf": "BES_2025_47.pdf"
+        }
+        o bien:
+        { "boletines": [ { ... }, { ... } ] }
 
-        Args:
-            ruta_json: Ruta del archivo JSON
-
-        Returns:
-            Diccionario con el contenido del JSON
+        Devuelve una lista de documentos listos para indexar en Elastic.
         """
-        try:
-            with open(ruta_json, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error al leer JSON {ruta_json}: {e}")
-            return {}
+        boletines: List[Dict] = []
+
+        archivos_json = Funciones.listar_archivos_json(ruta_carpeta)
+        if not archivos_json:
+            print(f"No se encontraron JSON en {ruta_carpeta}")
+            return []
+
+        for info_archivo in archivos_json:
+            ruta = info_archivo["ruta"]
+            data = Funciones.leer_json(ruta)
+            if not data:
+                continue
+
+            # Si el JSON trae una lista "boletines"
+            if isinstance(data, dict) and "boletines" in data and isinstance(data["boletines"], list):
+                for b in data["boletines"]:
+                    doc = Funciones._normalizar_boletin(b, ruta)
+                    boletines.append(doc)
+            else:
+                # Asumimos que el JSON ya es un solo boletín
+                doc = Funciones._normalizar_boletin(data, ruta)
+                boletines.append(doc)
+
+        print(f"Boletines cargados desde JSON: {len(boletines)}")
+        return boletines
 
     @staticmethod
-    def guardar_json(ruta_json: str, datos: Dict) -> bool:
+    def _normalizar_boletin(b: Dict, ruta_json: str) -> Dict:
         """
-        Guarda datos en un archivo JSON
-
-        Args:
-            ruta_json: Ruta donde guardar el JSON
-            datos: Datos a guardar
-
-        Returns:
-            True si se guardó correctamente
+        Normaliza la estructura de un boletín para que tenga siempre
+        los mismos campos antes de indexar en Elastic.
         """
-        try:
-            # Crear directorio si no existe
-            directorio = os.path.dirname(ruta_json)
-            if directorio:
-                Funciones.crear_carpeta(directorio)
+        anio = b.get("anio")
+        semana = b.get("semana") or b.get("semana_epidemiologica")
 
-            with open(ruta_json, 'w', encoding='utf-8') as f:
-                json.dump(datos, f, indent=4, ensure_ascii=False)
-            return True
-        except Exception as e:
-            print(f"Error al guardar JSON: {e}")
-            return False
+        # ID estándar: 2025-47 -> "2025-S47"
+        if anio and semana:
+            id_boletin = f"{anio}-S{int(semana):02d}"
+        else:
+            # fallback: nombre del json
+            id_boletin = os.path.splitext(os.path.basename(ruta_json))[0]
+
+        doc = {
+            "id_boletin": id_boletin,
+            "anio": anio,
+            "semana_epidemiologica": semana,
+            "tema_central": b.get("tema_central"),
+            "fecha_inicio": b.get("fecha_inicio"),
+            "fecha_fin": b.get("fecha_fin"),
+            "expertos_tematicos": b.get("expertos_tematicos", []),
+            "archivo_pdf": b.get("archivo_pdf"),
+            "fuente_json": os.path.basename(ruta_json)
+        }
+
+        return doc

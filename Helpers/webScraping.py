@@ -17,7 +17,10 @@ class WebScraping:
         Args:
             dominio_base: Dominio base para validar enlaces (ej: https://www.ins.gov.co/)
         """
+        # Aseguramos que termine en "/"
         self.dominio_base = dominio_base.rstrip("/") + "/"
+
+        # Sesión de requests reutilizable
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": (
@@ -94,15 +97,16 @@ class WebScraping:
     ) -> Dict:
         """
         Extrae todos los links de forma recursiva desde una URL inicial
+        y los guarda en un JSON.
 
-        Args:
-            url_inicial: URL inicial para comenzar la extracción
-            json_file_path: Ruta del archivo JSON para guardar/cargar links
-            listado_extensiones: Lista de extensiones a filtrar
-            max_iteraciones: Número máximo de iteraciones para evitar loops infinitos
-
-        Returns:
-            Diccionario con el resultado de la extracción
+        Estructura JSON:
+        {
+            "links": [
+                {"url": "...", "type": "pdf"},
+                {"url": "...", "type": "aspx"},
+                ...
+            ]
+        }
         """
         if listado_extensiones is None:
             listado_extensiones = ["pdf", "aspx"]
@@ -203,13 +207,6 @@ class WebScraping:
                        carpeta_destino: str = "static/uploads") -> Dict:
         """
         Recorre el archivo JSON y descarga los archivos PDF en la carpeta especificada
-
-        Args:
-            json_file_path: Ruta del archivo JSON con los links
-            carpeta_destino: Carpeta donde se descargarán los PDFs (default: static/uploads)
-
-        Returns:
-            Diccionario con el resultado de la descarga
         """
         try:
             # Cargar links desde JSON
