@@ -3,17 +3,15 @@ from dotenv import load_dotenv
 import os
 
 # ====== IMPORTS DE NUESTROS MÓDULOS ======
-# OJO: los nombres deben coincidir con los archivos en Helpers:
-# Helpers/mongoDB.py, Helpers/elastic.py, Helpers/funciones.py, Helpers/webScraping.py
+# Deben coincidir con los archivos en Helpers/
 from Helpers.mongoDB import MongoDB
 from Helpers.elastic import ElasticSearch
 from Helpers.funciones import Funciones
 from Helpers.webScraping import WebScraping
 
-
 # ================= CARGAR VARIABLES DE ENTORNO =================
-# Tu archivo se llama env.txt pero load_dotenv lo carga igual si está en la raíz del proyecto
-load_dotenv()
+from dotenv import load_dotenv
+load_dotenv("env.txt")
 
 app = Flask(__name__)
 
@@ -32,7 +30,7 @@ app.secret_key        = os.getenv("SECRET_KEY") or "Mpbm1234"
 VERSION_APP = "1.2.0"
 CREATOR_APP = "María Paula Barrero"
 
-# --------- DEBUG RÁPIDO (puedes comentarlo cuando todo funcione bien) ---------
+# --------- DEBUG RÁPIDO ---------
 print("DEBUG MONGO_URI:", repr(MONGO_URI))
 print("DEBUG MONGO_DB:", repr(MONGO_DB))
 print("DEBUG MONGO_COLECCION:", repr(MONGO_COLECCION))
@@ -43,38 +41,28 @@ print("DEBUG ELASTIC_INDEX_DEFAULT:", repr(ELASTIC_INDEX_DEFAULT))
 mongo = MongoDB(MONGO_URI, MONGO_DB)
 elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
 
-
 # ==================== RUTAS PÚBLICAS ====================
 @app.route("/")
 def landing():
     """Landing page pública"""
-    return render_template(
-        "landing.html",
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
+    return render_template("landing.html",
+                           version=VERSION_APP,
+                           creador=CREATOR_APP)
 
 @app.route("/about")
 def about():
     """Página About"""
-    return render_template(
-        "about.html",
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
+    return render_template("about.html",
+                           version=VERSION_APP,
+                           creador=CREATOR_APP)
 
 # ==================== BUSCADOR ELASTIC (PÚBLICO) ====================
 @app.route("/buscador")
 def buscador():
     """Página de búsqueda pública"""
-    return render_template(
-        "buscador.html",
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
+    return render_template("buscador.html",
+                           version=VERSION_APP,
+                           creador=CREATOR_APP)
 
 @app.route("/buscar-elastic", methods=["POST"])
 def buscar_elastic():
@@ -85,11 +73,9 @@ def buscar_elastic():
         campo = data.get("campo", "_all")
 
         if not texto_buscar:
-            return jsonify(
-                {"success": False, "error": "Texto de búsqueda es requerido"}
-            ), 400
+            return jsonify({"success": False,
+                            "error": "Texto de búsqueda es requerido"}), 400
 
-        # Query base (puedes cambiar a match_phrase si quieres más exactitud)
         query_base = {
             "query": {
                 "match": {
@@ -98,7 +84,7 @@ def buscar_elastic():
             }
         }
 
-        # Aggregations de ejemplo (ajústalas a tus campos reales)
+        # Aggregations de ejemplo (ajusta a tus campos reales)
         aggs = {
             "cuentos_por_mes": {
                 "date_histogram": {
@@ -126,7 +112,6 @@ def buscar_elastic():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 # ==================== AUTENTICACIÓN Y USUARIOS (MONGODB) ====================
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -149,6 +134,12 @@ def login():
 
     return render_template("login.html")
 
+@app.route("/logout")
+def logout():
+    """Cerrar sesión"""
+    session.clear()
+    flash("Sesión cerrada correctamente", "info")
+    return redirect(url_for("landing"))
 
 @app.route("/listar-usuarios")
 def listar_usuarios():
@@ -160,10 +151,9 @@ def listar_usuarios():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 @app.route("/gestor_usuarios")
 def gestor_usuarios():
-    """Página de gestión de usuarios (requiere login y permiso admin_usuarios)"""
+    """Gestión de usuarios (requiere login y permiso admin_usuarios)"""
     if not session.get("logged_in"):
         flash("Por favor, inicia sesión para acceder a esta página", "warning")
         return redirect(url_for("login"))
@@ -173,14 +163,11 @@ def gestor_usuarios():
         flash("No tiene permisos para gestionar usuarios", "danger")
         return redirect(url_for("admin"))
 
-    return render_template(
-        "gestor_usuarios.html",
-        usuario=session.get("usuario"),
-        permisos=permisos,
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
+    return render_template("gestor_usuarios.html",
+                           usuario=session.get("usuario"),
+                           permisos=permisos,
+                           version=VERSION_APP,
+                           creador=CREATOR_APP)
 
 @app.route("/crear-usuario", methods=["POST"])
 def crear_usuario():
@@ -191,9 +178,8 @@ def crear_usuario():
 
         permisos = session.get("permisos", {})
         if not permisos.get("admin_usuarios"):
-            return jsonify(
-                {"success": False, "error": "No tiene permisos para crear usuarios"}
-            ), 403
+            return jsonify({"success": False,
+                            "error": "No tiene permisos para crear usuarios"}), 403
 
         data = request.get_json()
         usuario = data.get("usuario")
@@ -201,15 +187,13 @@ def crear_usuario():
         permisos_usuario = data.get("permisos", {})
 
         if not usuario or not password:
-            return jsonify(
-                {"success": False, "error": "Usuario y password son requeridos"}
-            ), 400
+            return jsonify({"success": False,
+                            "error": "Usuario y password son requeridos"}), 400
 
         usuario_existente = mongo.obtener_usuario(usuario, MONGO_COLECCION)
         if usuario_existente:
-            return jsonify(
-                {"success": False, "error": "El usuario ya existe"}
-            ), 400
+            return jsonify({"success": False,
+                            "error": "El usuario ya existe"}), 400
 
         resultado = mongo.crear_usuario(
             usuario, password, permisos_usuario, MONGO_COLECCION
@@ -218,13 +202,11 @@ def crear_usuario():
         if resultado:
             return jsonify({"success": True})
         else:
-            return jsonify(
-                {"success": False, "error": "Error al crear usuario"}
-            ), 500
+            return jsonify({"success": False,
+                            "error": "Error al crear usuario"}), 500
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route("/actualizar-usuario", methods=["POST"])
 def actualizar_usuario():
@@ -235,33 +217,28 @@ def actualizar_usuario():
 
         permisos = session.get("permisos", {})
         if not permisos.get("admin_usuarios"):
-            return jsonify(
-                {"success": False, "error": "No tiene permisos para actualizar usuarios"}
-            ), 403
+            return jsonify({"success": False,
+                            "error": "No tiene permisos para actualizar usuarios"}), 403
 
         data = request.get_json()
         usuario_original = data.get("usuario_original")
         datos_usuario = data.get("datos", {})
 
         if not usuario_original:
-            return jsonify(
-                {"success": False, "error": "Usuario original es requerido"}
-            ), 400
+            return jsonify({"success": False,
+                            "error": "Usuario original es requerido"}), 400
 
         usuario_existente = mongo.obtener_usuario(usuario_original, MONGO_COLECCION)
         if not usuario_existente:
-            return jsonify(
-                {"success": False, "error": "Usuario no encontrado"}
-            ), 404
+            return jsonify({"success": False,
+                            "error": "Usuario no encontrado"}), 404
 
         nuevo_usuario = datos_usuario.get("usuario")
         if nuevo_usuario and nuevo_usuario != usuario_original:
             usuario_duplicado = mongo.obtener_usuario(nuevo_usuario, MONGO_COLECCION)
             if usuario_duplicado:
-                return jsonify(
-                    {"success": False,
-                     "error": "Ya existe otro usuario con ese nombre"}
-                ), 400
+                return jsonify({"success": False,
+                                "error": "Ya existe otro usuario con ese nombre"}), 400
 
         resultado = mongo.actualizar_usuario(
             usuario_original, datos_usuario, MONGO_COLECCION
@@ -270,13 +247,11 @@ def actualizar_usuario():
         if resultado:
             return jsonify({"success": True})
         else:
-            return jsonify(
-                {"success": False, "error": "Error al actualizar usuario"}
-            ), 500
+            return jsonify({"success": False,
+                            "error": "Error al actualizar usuario"}), 500
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route("/eliminar-usuario", methods=["POST"])
 def eliminar_usuario():
@@ -287,41 +262,35 @@ def eliminar_usuario():
 
         permisos = session.get("permisos", {})
         if not permisos.get("admin_usuarios"):
-            return jsonify(
-                {"success": False, "error": "No tiene permisos para eliminar usuarios"}
-            ), 403
+            return jsonify({"success": False,
+                            "error": "No tiene permisos para eliminar usuarios"}), 403
 
         data = request.get_json()
         usuario = data.get("usuario")
 
         if not usuario:
-            return jsonify(
-                {"success": False, "error": "Usuario es requerido"}
-            ), 400
+            return jsonify({"success": False,
+                            "error": "Usuario es requerido"}), 400
 
         usuario_existente = mongo.obtener_usuario(usuario, MONGO_COLECCION)
         if not usuario_existente:
-            return jsonify(
-                {"success": False, "error": "Usuario no encontrado"}
-            ), 404
+            return jsonify({"success": False,
+                            "error": "Usuario no encontrado"}), 404
 
         if usuario == session.get("usuario"):
-            return jsonify(
-                {"success": False, "error": "No puede eliminarse a sí mismo"}
-            ), 400
+            return jsonify({"success": False,
+                            "error": "No puede eliminarse a sí mismo"}), 400
 
         resultado = mongo.eliminar_usuario(usuario, MONGO_COLECCION)
 
         if resultado:
             return jsonify({"success": True})
         else:
-            return jsonify(
-                {"success": False, "error": "Error al eliminar usuario"}
-            ), 500
+            return jsonify({"success": False,
+                            "error": "Error al eliminar usuario"}), 500
 
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 # ==================== GESTOR ELASTIC (ADMIN) ====================
 @app.route("/gestor_elastic")
@@ -336,14 +305,11 @@ def gestor_elastic():
         flash("No tiene permisos para gestionar ElasticSearch", "danger")
         return redirect(url_for("admin"))
 
-    return render_template(
-        "gestor_elastic.html",
-        usuario=session.get("usuario"),
-        permisos=permisos,
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
+    return render_template("gestor_elastic.html",
+                           usuario=session.get("usuario"),
+                           permisos=permisos,
+                           version=VERSION_APP,
+                           creador=CREATOR_APP)
 
 @app.route("/listar-indices-elastic")
 def listar_indices_elastic():
@@ -354,15 +320,12 @@ def listar_indices_elastic():
 
         permisos = session.get("permisos", {})
         if not permisos.get("admin_elastic"):
-            return jsonify(
-                {"error": "No tiene permisos para gestionar ElasticSearch"}
-            ), 403
+            return jsonify({"error": "No tiene permisos para gestionar ElasticSearch"}), 403
 
         indices = elastic.listar_indices()
         return jsonify(indices)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @app.route("/ejecutar-query-elastic", methods=["POST"])
 def ejecutar_query_elastic():
@@ -373,24 +336,19 @@ def ejecutar_query_elastic():
 
         permisos = session.get("permisos", {})
         if not permisos.get("admin_elastic"):
-            return jsonify(
-                {"success": False,
-                 "error": "No tiene permisos para gestionar ElasticSearch"}
-            ), 403
+            return jsonify({"success": False,
+                            "error": "No tiene permisos para gestionar ElasticSearch"}), 403
 
         data = request.get_json()
         query_json = data.get("query")
 
         if not query_json:
-            return jsonify(
-                {"success": False, "error": "Query es requerida"}
-            ), 400
+            return jsonify({"success": False, "error": "Query es requerida"}), 400
 
         resultado = elastic.ejecutar_query(query_json)
         return jsonify(resultado)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-
 
 @app.route("/cargar_doc_elastic")
 def cargar_doc_elastic():
@@ -404,16 +362,13 @@ def cargar_doc_elastic():
         flash("No tiene permisos para cargar datos a ElasticSearch", "danger")
         return redirect(url_for("admin"))
 
-    return render_template(
-        "documentos_elastic.html",
-        usuario=session.get("usuario"),
-        permisos=permisos,
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
+    return render_template("documentos_elastic.html",
+                           usuario=session.get("usuario"),
+                           permisos=permisos,
+                           version=VERSION_APP,
+                           creador=CREATOR_APP)
 
-
-# ---------- PROCESAR ZIP CON JSON (para documentos_elastic.html) ----------
+# ---------- PROCESAR ZIP CON JSON ----------
 @app.route("/procesar-zip-elastic", methods=["POST"])
 def procesar_zip_elastic():
     """
@@ -426,30 +381,21 @@ def procesar_zip_elastic():
 
         permisos = session.get("permisos", {})
         if not permisos.get("admin_data_elastic"):
-            return jsonify(
-                {"success": False,
-                 "error": "No tiene permisos para cargar datos a ElasticSearch"}
-            ), 403
+            return jsonify({"success": False,
+                            "error": "No tiene permisos para cargar datos a ElasticSearch"}), 403
 
         if "file" not in request.files:
-            return jsonify(
-                {"success": False, "error": "No se recibió archivo ZIP"}
-            ), 400
+            return jsonify({"success": False, "error": "No se recibió archivo ZIP"}), 400
 
         file = request.files["file"]
         index = request.form.get("index")
 
         if not index:
-            return jsonify(
-                {"success": False, "error": "Índice de destino es requerido"}
-            ), 400
+            return jsonify({"success": False, "error": "Índice de destino es requerido"}), 400
 
         if file.filename == "":
-            return jsonify(
-                {"success": False, "error": "Nombre de archivo vacío"}
-            ), 400
+            return jsonify({"success": False, "error": "Nombre de archivo vacío"}), 400
 
-        # Carpeta donde se descomprime
         carpeta_destino = "static/uploads"
         Funciones.crear_carpeta(carpeta_destino)
         Funciones.borrar_contenido_carpeta(carpeta_destino)
@@ -460,7 +406,6 @@ def procesar_zip_elastic():
         archivos = Funciones.descomprimir_zip_local(zip_path, carpeta_destino)
         os.remove(zip_path)
 
-        # Filtrar solo JSON y agregar tamaño
         archivos_json = []
         for a in archivos:
             if a["extension"].lower() == ".json":
@@ -481,8 +426,7 @@ def procesar_zip_elastic():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-# ---------- PROCESAR WEB SCRAPING (ya lo tenías) ----------
+# ---------- PROCESAR WEB SCRAPING ----------
 @app.route("/procesar-webscraping-elastic", methods=["POST"])
 def procesar_webscraping_elastic():
     """API para procesar Web Scraping (descargar PDFs)"""
@@ -492,9 +436,8 @@ def procesar_webscraping_elastic():
 
         permisos = session.get("permisos", {})
         if not permisos.get("admin_data_elastic"):
-            return jsonify(
-                {"success": False, "error": "No tiene permisos para cargar datos"}
-            ), 403
+            return jsonify({"success": False,
+                            "error": "No tiene permisos para cargar datos"}), 403
 
         data = request.get_json()
         url = data.get("url")
@@ -503,9 +446,8 @@ def procesar_webscraping_elastic():
         index = data.get("index")
 
         if not url or not index:
-            return jsonify(
-                {"success": False, "error": "URL e índice son requeridos"}
-            ), 400
+            return jsonify({"success": False,
+                            "error": "URL e índice son requeridos"}), 400
 
         lista_ext_navegar = [ext.strip() for ext in extensiones_navegar.split(",")]
         lista_tipos_archivos = [ext.strip() for ext in tipos_archivos.split(",")]
@@ -526,27 +468,21 @@ def procesar_webscraping_elastic():
             max_iteraciones=50
         )
 
-        if not resultado["success"]:
+        if not resultado.get("success", True):
             scraper.close()
-            return jsonify(
-                {"success": False, "error": "Error al extraer enlaces"}
-            ), 500
+            return jsonify({"success": False, "error": "Error al extraer enlaces"}), 500
 
-        # Descargar PDFs
         resultado_descarga = scraper.descargar_pdfs(json_path, carpeta_upload)
         scraper.close()
 
-        # Listar PDFs descargados
-        archivos = Funciones.listar_archivos_carpeta(
-            carpeta_upload, lista_tipos_archivos
-        )
+        archivos = Funciones.listar_archivos_carpeta(carpeta_upload, lista_tipos_archivos)
 
         return jsonify({
             "success": True,
             "archivos": archivos,
             "mensaje": f"Se descargaron {len(archivos)} archivos",
             "stats": {
-                "total_enlaces": resultado["total_links"],
+                "total_enlaces": resultado.get("total_links", 0),
                 "descargados": resultado_descarga.get("descargados", 0),
                 "errores": resultado_descarga.get("errores", 0)
             }
@@ -555,13 +491,12 @@ def procesar_webscraping_elastic():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 # ---------- CARGAR DOCUMENTOS SELECCIONADOS A ELASTIC ----------
 @app.route("/cargar-documentos-elastic", methods=["POST"])
 def cargar_documentos_elastic():
     """
     Recibe la lista de archivos seleccionados (JSON) y los indexa en ElasticSearch.
-    Para método='webscraping' ahora mismo no indexamos (solo ZIP con JSON).
+    Actualmente implementado solo para método='zip' (archivos JSON).
     """
     try:
         if not session.get("logged_in"):
@@ -569,10 +504,8 @@ def cargar_documentos_elastic():
 
         permisos = session.get("permisos", {})
         if not permisos.get("admin_data_elastic"):
-            return jsonify(
-                {"success": False,
-                 "error": "No tiene permisos para cargar datos a ElasticSearch"}
-            ), 403
+            return jsonify({"success": False,
+                            "error": "No tiene permisos para cargar datos a ElasticSearch"}), 403
 
         data = request.get_json()
         archivos = data.get("archivos", [])
@@ -580,18 +513,12 @@ def cargar_documentos_elastic():
         metodo = data.get("metodo", "zip")
 
         if not index:
-            return jsonify(
-                {"success": False, "error": "Índice es requerido"}
-            ), 400
+            return jsonify({"success": False, "error": "Índice es requerido"}), 400
 
         if metodo != "zip":
-            # Si quieres, más adelante implementamos flujo para PDFs + PLN
-            return jsonify({
-                "success": False,
-                "error": "Actualmente solo está implementada la carga desde ZIP con JSON."
-            }), 400
+            return jsonify({"success": False,
+                            "error": "Actualmente solo está implementada la carga desde ZIP con JSON."}), 400
 
-        # Leer todos los JSON y armar una lista de documentos
         docs = []
         for a in archivos:
             ruta = a.get("ruta")
@@ -605,14 +532,12 @@ def cargar_documentos_elastic():
                 docs.append(contenido)
 
         if not docs:
-            return jsonify({
-                "success": False,
-                "error": "No se encontraron documentos válidos en los JSON seleccionados"
-            }), 400
+            return jsonify({"success": False,
+                            "error": "No se encontraron documentos válidos para indexar"}), 400
 
         resultado = elastic.indexar_bulk(index=index, documentos=docs)
 
-        if not resultado.get("success"):
+        if not resultado.get("success", False):
             return jsonify(resultado), 500
 
         return jsonify({
@@ -624,31 +549,25 @@ def cargar_documentos_elastic():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-# ==================== PÁGINA ADMIN PRINCIPAL ====================
+# ==================== PÁGINA ADMIN ====================
 @app.route("/admin")
 def admin():
     """Página de administración (protegida requiere login)"""
     if not session.get("logged_in"):
-        flash(
-            "Por favor, inicia sesión para acceder al área de administración",
-            "warning"
-        )
+        flash("Por favor, inicia sesión para acceder al área de administración", "warning")
         return redirect(url_for("login"))
 
-    return render_template(
-        "admin.html",
-        usuario=session.get("usuario"),
-        permisos=session.get("permisos")
-    )
-
+    return render_template("admin.html",
+                           usuario=session.get("usuario"),
+                           permisos=session.get("permisos"),
+                           version=VERSION_APP,
+                           creador=CREATOR_APP)
 
 # ==================== MAIN ====================
 if __name__ == "__main__":
     # Crear carpetas necesarias
     Funciones.crear_carpeta("static/uploads")
 
-    # Verificar conexiones
     print("\n" + "=" * 50)
     print("VERIFICANDO CONEXIONES")
 
