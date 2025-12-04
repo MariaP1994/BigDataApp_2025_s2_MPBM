@@ -21,15 +21,15 @@ if __name__ == "__main__":
 
     print("\nProbando ping a Elastic...")
     if not es.test_connection():
-        print("❌ No se pudo conectar a ElasticSearch (ping falso).")
+        print("No se pudo conectar a ElasticSearch (ping falso).")
     else:
-        print("✅ Ping OK")
+        print("Ping OK")
 
     print("\nListando índices visibles...")
     indices = es.listar_indices()
     print("Índices que ve este cliente:", indices)
 
     if ELASTIC_INDEX_DEFAULT in indices:
-        print(f"✅ El índice '{ELASTIC_INDEX_DEFAULT}' SÍ existe en el clúster.")
+        print(f"El índice '{ELASTIC_INDEX_DEFAULT}' SÍ existe en el clúster.")
     else:
-        print(f"⚠ Ojo: el índice '{ELASTIC_INDEX_DEFAULT}' NO aparece en la lista.")
+        print(f"Ojo: el índice '{ELASTIC_INDEX_DEFAULT}' NO aparece en la lista.")

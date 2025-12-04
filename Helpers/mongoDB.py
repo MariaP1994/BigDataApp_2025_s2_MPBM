@@ -29,10 +29,7 @@ class MongoDB:
 
     def validar_usuario(self, usuario: str, password: str, coleccion: str) -> Optional[Dict]:
         """
-        Valida usuario y contraseña.
 
-        Usamos la contraseña en plano (sin MD5),
-        porque así la guardaste en la colección.
         """
         try:
             user = self.db[coleccion].find_one({

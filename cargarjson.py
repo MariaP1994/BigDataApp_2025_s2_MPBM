@@ -26,21 +26,19 @@ if __name__ == "__main__":
     # Probar conexión
     print("\nProbando conexión a ElasticSearch...")
     if not es.test_connection():
-        print("❌ No se pudo conectar a ElasticSearch. Revisa URL o API KEY en env.txt")
+        print("No se pudo conectar a ElasticSearch. Revisa URL o API KEY en env.txt")
         raise SystemExit(1)
     else:
-        print("✅ Conectado a ElasticSearch")
+        print("Conectado a ElasticSearch")
 
     # ================== CARPETA CON LOS JSON ==================
-    # Si tus JSON están en otra ruta, cámbiala aquí:
-    # por ejemplo: json_dir = r"C:\Users\ARNULFO\Documents\GitHub\BigDataApp_2025_s2_MPBM\data"
-    json_dir = os.path.join("data")   # carpeta 'data' en la raíz del proyecto
+    json_dir = os.path.join("data") 
 
     print("\nUsando carpeta:", os.path.abspath(json_dir))
     print("Índice destino:", ELASTIC_INDEX_DEFAULT)
 
     if not os.path.isdir(json_dir):
-        print("❌ La carpeta de JSON no existe. Revisa la ruta:", json_dir)
+        print("La carpeta de JSON no existe. Revisa la ruta:", json_dir)
         raise SystemExit(1)
 
     # ================== CARGAR DOCUMENTOS DESDE LOS JSON ==================
@@ -51,7 +49,7 @@ if __name__ == "__main__":
             continue
 
         ruta_archivo = os.path.join(json_dir, filename)
-        print(f"📄 Leyendo: {ruta_archivo}")
+        print(f" Leyendo: {ruta_archivo}")
 
         try:
             with open(ruta_archivo, "r", encoding="utf-8") as f:
@@ -67,7 +65,7 @@ if __name__ == "__main__":
                     print(f"⚠ Formato no reconocido en {filename}: {type(data)}")
 
         except Exception as e:
-            print(f"❌ Error leyendo {filename}: {e}")
+            print(f"Error leyendo {filename}: {e}")
 
     print(f"\nTotal de documentos preparados para indexar: {len(documentos)}")
 

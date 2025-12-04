@@ -41,13 +41,13 @@ class ElasticSearch:
         try:
             return self.client.ping()
         except AuthenticationException as e:
-            print(f"❌ Error de autenticación con Elastic: {e}")
+            print(f"Error de autenticación con Elastic: {e}")
             return False
         except ConnectionError as e:
-            print(f"❌ Error de conexión a Elastic: {e}")
+            print(f"Error de conexión a Elastic: {e}")
             return False
         except Exception as e:
-            print(f"❌ Error inesperado al conectar a Elastic: {e}")
+            print(f"Error inesperado al conectar a Elastic: {e}")
             return False
 
     def listar_indices(self) -> List[str]:
@@ -56,10 +56,10 @@ class ElasticSearch:
             resp = self.client.indices.get(index="*")
             return list(resp.keys())
         except AuthenticationException as e:
-            print("❌ Error al listar índices (autenticación):", e)
+            print("Error al listar índices (autenticación):", e)
             return []
         except Exception as e:
-            print("❌ Error al listar índices:", e)
+            print("Error al listar índices:", e)
             return []
 
     # ------------------------------------------------------------------ #
@@ -74,7 +74,7 @@ class ElasticSearch:
         size: int = 10,
     ) -> Dict:
 
-        # Si no se pasa índice, usamos el índice por defecto
+
         if not index:
             index = self.default_index
 

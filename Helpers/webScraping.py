@@ -4,13 +4,13 @@ import json
 from urllib.parse import urljoin
 import os
 from typing import List, Dict
-from Helpers.funciones import Funciones   # ajustado al módulo correcto
+from Helpers.funciones import Funciones
 
 
 class WebScraping:
     """Clase para realizar web scraping y extracción de enlaces"""
 
-    def _init_(self, dominio_base: str = "https://www.ins.gov.co/"):
+    def __init__(self, dominio_base: str = "https://www.ins.gov.co/"):
         """
         Inicializa la clase WebScraping
 
