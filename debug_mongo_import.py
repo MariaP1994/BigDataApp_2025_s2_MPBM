@@ -17,7 +17,7 @@ try:
     print("argcount:", m.MongoDB._init.code_.co_argcount)
     print("co_varnames:", m.MongoDB._init.code_.co_varnames)
 except Exception as e:
-    print("No se pudo inspeccionar _init_:", e)
+    print("No se pudo inspeccionar __init__:", e)
 
 # Ver el código fuente de MongoDB
 try:
