@@ -1,38 +1,49 @@
+print(">>> CARGANDO Helpers.mongoDB DESDE:", __file__)
+
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from typing import Dict, List, Optional
+import hashlib
 
 
 class MongoDB:
-    """
-    Clase de ayuda para conectarse a MongoDB y manejar usuarios.
-    Debe usarse como: mongo = MongoDB(uri, db_name)
-    """
+    def __init__(self, uri: str, db_name: str):
+        """
+        Inicializa la conexión a MongoDB.
 
-    def _init_(self, uri: str, db_name: str):
-        """Inicializa conexión a MongoDB"""
+        Args:
+            uri: cadena de conexión a MongoDB (MongoDB Atlas)
+            db_name: nombre de la base de datos
+        """
         if not uri:
-            raise ValueError("La URI de MongoDB (MONGO_URI) está vacía")
+            raise ValueError("MONGO_URI no está configurada")
 
         self.client = MongoClient(uri)
         self.db = self.client[db_name]
 
     def test_connection(self) -> bool:
-        """Prueba la conexión a MongoDB"""
+        """Prueba la conexión a MongoDB."""
         try:
             self.client.admin.command("ping")
             return True
         except ConnectionFailure:
             return False
 
-    # ========== OPERACIONES DE USUARIO ==========
-
     def validar_usuario(self, usuario: str, password: str, coleccion: str) -> Optional[Dict]:
-        """Valida usuario y contraseña (texto plano, SIN MD5 para este proyecto)"""
+        """
+        Valida usuario y contraseña.
+
+        AHORA MISMO usamos la contraseña en plano (sin MD5),
+        porque así la guardaste en la colección.
+        """
         try:
+            # OJO: si después quieres MD5:
+            # password_md5 = hashlib.md5(password.encode()).hexdigest()
+            password_plain = password
+
             user = self.db[coleccion].find_one({
                 "usuario": usuario,
-                "password": password   # OJO: debe coincidir con lo que guardaste en Atlas
+                "password": password_plain
             })
             return user
         except Exception as e:
@@ -40,7 +51,7 @@ class MongoDB:
             return None
 
     def obtener_usuario(self, usuario: str, coleccion: str) -> Optional[Dict]:
-        """Obtiene información de un usuario"""
+        """Obtiene un usuario por nombre."""
         try:
             return self.db[coleccion].find_one({"usuario": usuario})
         except Exception as e:
@@ -48,7 +59,7 @@ class MongoDB:
             return None
 
     def listar_usuarios(self, coleccion: str) -> List[Dict]:
-        """Lista todos los usuarios"""
+        """Lista todos los usuarios."""
         try:
             return list(self.db[coleccion].find({}))
         except Exception as e:
@@ -56,11 +67,14 @@ class MongoDB:
             return []
 
     def crear_usuario(self, usuario: str, password: str, permisos: Dict, coleccion: str) -> bool:
-        """Crea un nuevo usuario"""
+        """Crea un nuevo usuario."""
         try:
+            # Igual que en validar_usuario: guardamos en plano
+            password_plain = password
+
             documento = {
                 "usuario": usuario,
-                "password": password,   # sin MD5 para que coincida con validar_usuario
+                "password": password_plain,
                 "permisos": permisos
             }
             self.db[coleccion].insert_one(documento)
@@ -70,8 +84,9 @@ class MongoDB:
             return False
 
     def actualizar_usuario(self, usuario: str, nuevos_datos: Dict, coleccion: str) -> bool:
-        """Actualiza un usuario existente"""
+        """Actualiza un usuario existente."""
         try:
+            # Si en algún momento quieres aplicar MD5, se haría aquí.
             self.db[coleccion].update_one(
                 {"usuario": usuario},
                 {"$set": nuevos_datos}
@@ -82,7 +97,7 @@ class MongoDB:
             return False
 
     def eliminar_usuario(self, usuario: str, coleccion: str) -> bool:
-        """Elimina un usuario"""
+        """Elimina un usuario."""
         try:
             resultado = self.db[coleccion].delete_one({"usuario": usuario})
             return resultado.deleted_count > 0
@@ -91,5 +106,5 @@ class MongoDB:
             return False
 
     def close(self):
-        """Cierra la conexión"""
+        """Cierra la conexión."""
         self.client.close()
