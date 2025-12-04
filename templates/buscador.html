@@ -1,348 +1,7 @@
-{% extends "base.html" %}
-
-{% block title %}Buscador de documentos - BigData-MiProyecto{% endblock %}
-
-{% block extra_css %}
-<style>
-    .search-card {
-        background: rgba(15, 23, 42, 0.9);
-        border-radius: 18px;
-        padding: 24px 24px 18px;
-        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        color: #e5e7eb;
-    }
-
-    .search-title {
-        font-weight: 700;
-        letter-spacing: .04em;
-        text-transform: uppercase;
-        font-size: .85rem;
-        color: #a5b4fc;
-    }
-
-    .search-hero {
-        font-size: 1.8rem;
-        font-weight: 700;
-    }
-
-    .search-subtitle {
-        color: #9ca3af;
-        font-size: .95rem;
-    }
-
-    .search-label {
-        font-size: .8rem;
-        text-transform: uppercase;
-        letter-spacing: .06em;
-        color: #9ca3af;
-        margin-bottom: 4px;
-    }
-
-    .search-input {
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(148, 163, 184, 0.6);
-        color: #e5e7eb;
-    }
-
-    .search-input:focus {
-        background: rgba(15, 23, 42, 0.95);
-        border-color: #22c55e;
-        box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4);
-        color: #e5e7eb;
-    }
-
-    .search-select {
-        background: rgba(15, 23, 42, 0.85);
-        border: 1px solid rgba(148, 163, 184, 0.6);
-        color: #e5e7eb;
-    }
-
-    .search-select option {
-        color: #0f172a;
-    }
-
-    .btn-search-main {
-        height: 100%;
-        font-weight: 600;
-        font-size: .95rem;
-        border-radius: 999px;
-    }
-
-    /* Resultados */
-    .result-card {
-        margin-top: 1.8rem;
-        background: rgba(15, 23, 42, 0.92);
-        border-radius: 18px;
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
-        color: #e5e7eb;
-    }
-
-    .result-header {
-        border-bottom: 1px solid rgba(75, 85, 99, 0.7);
-    }
-
-    .result-header h5 {
-        margin: 0;
-        font-weight: 600;
-    }
-
-    .badge-soft {
-        background: rgba(34, 197, 94, 0.12);
-        color: #bbf7d0;
-        border-radius: 999px;
-        padding: .15rem .7rem;
-        font-size: .7rem;
-    }
-
-    .resultados-container {
-        margin-top: 1rem;
-    }
-
-    .aggs-list {
-        background: rgba(15, 23, 42, 0.9);
-        border-radius: 14px;
-        padding: 1rem 1rem .5rem;
-        max-height: 520px;
-        overflow-y: auto;
-        border: 1px dashed rgba(148, 163, 184, 0.4);
-        font-size: .85rem;
-    }
-
-    .aggs-item {
-        margin-bottom: .9rem;
-        padding-bottom: .7rem;
-        border-bottom: 1px solid rgba(55, 65, 81, 0.7);
-    }
-
-    .aggs-item:last-child {
-        border-bottom: none;
-        margin-bottom: 0;
-        padding-bottom: 0;
-    }
-
-    .aggs-item h6 {
-        font-size: .78rem;
-        text-transform: uppercase;
-        letter-spacing: .08em;
-        color: #9ca3af;
-        margin-bottom: .4rem;
-    }
-
-    .tabla-resultados {
-        max-height: 520px;
-        overflow-y: auto;
-        border-radius: 14px;
-    }
-
-    .table-dark thead th {
-        border-color: #374151;
-    }
-
-    .json-view {
-        background-color: #020617;
-        border-radius: .5rem;
-        padding: .5rem .6rem;
-        font-family: "JetBrains Mono", "Courier New", monospace;
-        font-size: .74rem;
-        white-space: pre-wrap;
-        max-height: 170px;
-        overflow-y: auto;
-        color: #e5e7eb;
-        border: 1px solid rgba(55, 65, 81, 0.9);
-    }
-
-    .btn-link-detalle {
-        font-size: .78rem;
-        padding: 0;
-    }
-
-    /* Spinner */
-    #div_cargando p {
-        color: #e5e7eb;
-    }
-
-    /* Modal */
-    .modal-content {
-        background: #020617;
-        color: #e5e7eb;
-    }
-
-    .modal-header {
-        border-bottom-color: #1f2937;
-    }
-
-    .modal-footer {
-        border-top-color: #1f2937;
-    }
-</style>
-{% endblock %}
-
-
-{% block content %}
-
-<!-- CABECERA DE PÁGINA -->
-<div class="mb-4">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <div>
-            <div class="search-title">Módulo de consulta</div>
-            <h1 class="search-hero mb-1">Buscador de boletines epidemiológicos</h1>
-            <p class="search-subtitle mb-0">
-                Explora los boletines semanales indexados en ElasticSearch. 
-                Escribe un texto libre y, si lo deseas, acota por año, semana o tipo de archivo.
-            </p>
-        </div>
-        <div class="text-end small text-white-50">
-            Índice por defecto: <span class="badge-soft">{{ ELASTIC_INDEX_DEFAULT if ELASTIC_INDEX_DEFAULT else 'N/D' }}</span><br>
-            Motor: ElasticSearch Cloud
-        </div>
-    </div>
-</div>
-
-
-<!-- FORMULARIO DE BÚSQUEDA -->
-<div class="search-card mb-3">
-    <form id="formBuscar" onsubmit="buscar(event)">
-        <div class="row g-3 align-items-end">
-
-            <!-- Texto principal -->
-            <div class="col-12 col-lg-6">
-                <label class="search-label" for="textoBuscar">Texto a buscar</label>
-                <input type="text" class="form-control search-input" id="textoBuscar"
-                       placeholder="Ej. COVID-19, mortalidad, vigilancia..."
-                       required>
-            </div>
-
-            <!-- Filtros opcionales -->
-            <div class="col-6 col-lg-2">
-                <label class="search-label" for="anioFiltro">Año</label>
-                <input type="number" min="2000" max="2100"
-                       class="form-control search-input"
-                       id="anioFiltro" placeholder="Ej. 2023">
-            </div>
-
-            <div class="col-6 col-lg-2">
-                <label class="search-label" for="semanaFiltro">Semana</label>
-                <input type="number" min="1" max="53"
-                       class="form-control search-input"
-                       id="semanaFiltro" placeholder="1 - 53">
-            </div>
-
-            <div class="col-12 col-lg-2">
-                <label class="search-label" for="tipoFiltro">Tipo de archivo</label>
-                <select id="tipoFiltro" class="form-select search-select">
-                    <option value="">Todos</option>
-                    <option value="pdf">PDF</option>
-                    <option value="html">HTML</option>
-                    <option value="json">JSON</option>
-                </select>
-            </div>
-        </div>
-
-        <div class="row mt-3 align-items-center">
-            <div class="col-md-8 small text-white-50">
-                Puedes comenzar solo con el texto y luego ir refinando la búsqueda con los filtros.
-            </div>
-            <div class="col-md-4 text-md-end mt-2 mt-md-0">
-                <button class="btn btn-primary btn-search-main px-4">
-                    <i class="bi bi-search me-1"></i> Buscar documentos
-                </button>
-            </div>
-        </div>
-    </form>
-</div>
-
-
-<!-- LOADING -->
-<div id="div_cargando" class="text-center mt-4" style="display:none;">
-    <div class="spinner-border text-light"></div>
-    <p class="mt-2">Buscando documentos...</p>
-</div>
-
-
-<!-- RESULTADOS -->
-<div id="divResultados" class="resultados-container" style="display:none;">
-    <div class="result-card">
-        <div class="card-header result-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                Resultados de la búsqueda
-                <span class="badge-soft ms-2">
-                    Total: <span id="totalResultados">0</span>
-                </span>
-            </h5>
-            <small class="text-white-50">
-                Resumen y detalle de los boletines encontrados.
-            </small>
-        </div>
-
-        <div class="card-body">
-            <div class="row g-3">
-
-                <!-- AGGREGATIONS / RESUMEN (opcional) -->
-                <div class="col-md-3">
-                    <div class="aggs-list">
-                        <h6 class="mb-2">Resumen por facetas</h6>
-                        <div id="divAggregations"></div>
-                    </div>
-                </div>
-
-                <!-- TABLA RESULTADOS -->
-                <div class="col-md-9">
-                    <div class="tabla-resultados">
-                        <table class="table table-dark table-striped table-hover mb-0 align-middle">
-                            <thead>
-                                <tr>
-                                    <th style="width:40px;">#</th>
-                                    <th style="width:140px;">ID</th>
-                                    <th style="width:80px;">Score</th>
-                                    <th style="width:160px;">Índice</th>
-                                    <th>Resumen del boletín</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaResultados"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-    </div>
-</div>
-
-
-<!-- ERROR -->
-<div id="divError" class="alert alert-danger mt-4" style="display:none;">
-    <strong>Error:</strong> <span id="mensajeError"></span>
-</div>
-
-
-<!-- MODAL DETALLE -->
-<div class="modal fade" id="modalDetalle" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Detalle completo del boletín</h5>
-                <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modalDetalleBody"></div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{% endblock %}
-
-
-
 {% block extra_js %}
 <script>
-    // Guardamos los últimos hits para el modal
     let ultimaBusqueda = [];
 
-    // ---------- BUSCAR ----------
     function buscar(event) {
         event.preventDefault();
 
@@ -376,7 +35,7 @@
             document.getElementById("div_cargando").style.display = "none";
 
             if (!data.success) {
-                mostrarError(data.error || "Error desconocido en la búsqueda.");
+                mostrarError(data.error || "Error desconocido.");
                 return;
             }
 
@@ -385,11 +44,10 @@
         .catch(err => {
             console.error(err);
             document.getElementById("div_cargando").style.display = "none";
-            mostrarError("Error en el servidor o en la conexión.");
+            mostrarError("Error en la conexión.");
         });
     }
 
-    // ---------- MOSTRAR RESULTADOS ----------
     function mostrarResultados(data) {
         document.getElementById("totalResultados").textContent = data.total || 0;
 
@@ -400,7 +58,6 @@
         document.getElementById("divResultados").style.display = "block";
     }
 
-    // ---------- AGGREGATIONS (opcional) ----------
     function mostrarAggregations(aggs) {
         const cont = document.getElementById("divAggregations");
         cont.innerHTML = "";
@@ -410,16 +67,16 @@
             return;
         }
 
-        // Si más adelante agregas aggs específicas, las puedes pintar aquí.
         for (const [nombre, agg] of Object.entries(aggs)) {
             const div = document.createElement("div");
             div.className = "aggs-item";
-            div.innerHTML = `<h6>${nombre}</h6><pre class="json-view mb-0">${JSON.stringify(agg, null, 2)}</pre>`;
+            div.innerHTML =
+                `<h6>${nombre}</h6>
+                 <pre class="json-view mb-0">${JSON.stringify(agg, null, 2)}</pre>`;
             cont.appendChild(div);
         }
     }
 
-    // ---------- TABLA DE HITS ----------
     function mostrarHits(hits) {
         const tabla = document.getElementById("tablaResultados");
         tabla.innerHTML = "";
@@ -437,6 +94,14 @@
             const rango  = src.rango_fechas || "N/D";
             const tema   = src.tema_central || "Sin tema central";
             const publi  = src.publicacion_en_linea || "";
+            const pdfUrl = src.pdf_url || "";
+
+            let temasPortadaTexto = "";
+            if (Array.isArray(src.temas_portada) && src.temas_portada.length > 0) {
+                temasPortadaTexto = src.temas_portada.join(" · ");
+            } else if (typeof src.temas_portada === "string" && src.temas_portada.trim() !== "") {
+                temasPortadaTexto = src.temas_portada;
+            }
 
             let resumenHtml = `
                 <strong>Semana epidemiológica:</strong> ${semana}<br>
@@ -444,8 +109,19 @@
                 <strong>Tema central:</strong> ${tema}
             `;
 
+            if (temasPortadaTexto) {
+                resumenHtml += `<br><strong>Temas de portada:</strong> ${temasPortadaTexto}`;
+            }
+
             if (publi) {
                 resumenHtml += `<br><strong>Publicación en línea:</strong> ${publi}`;
+            }
+
+            if (pdfUrl) {
+                resumenHtml += `<br><strong>PDF:</strong> 
+                    <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer">
+                        Abrir boletín
+                    </a>`;
             }
 
             const row = document.createElement("tr");
@@ -457,8 +133,7 @@
                 "<td>" +
                     "<div class='json-view mb-1'>" + resumenHtml + "</div>" +
                     "<button class='btn btn-link btn-link-detalle text-info' " +
-                        "onclick='mostrarDetalle(" + i + ")' " +
-                        "data-bs-toggle='modal' data-bs-target='#modalDetalle'>" +
+                        "onclick='mostrarDetalle(" + i + ")' data-bs-toggle='modal' data-bs-target='#modalDetalle'>" +
                         "<i class='bi bi-arrows-angle-expand me-1'></i>Ver JSON completo" +
                     "</button>" +
                 "</td>";
@@ -467,13 +142,11 @@
         });
     }
 
-    // ---------- ERROR ----------
     function mostrarError(msg) {
         document.getElementById("mensajeError").textContent = msg;
         document.getElementById("divError").style.display = "block";
     }
 
-    // ---------- MODAL DETALLE ----------
     function mostrarDetalle(i) {
         const hit = ultimaBusqueda[i];
         if (!hit) return;

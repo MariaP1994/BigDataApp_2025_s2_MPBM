@@ -7,6 +7,7 @@ import os
 
 # ====== IMPORTS DE NUESTROS MÓDULOS ======
 from Helpers.mongoDB import MongoDB
+    # Helpers.elastic debe tener la clase ElasticSearch bien definida
 from Helpers.elastic import ElasticSearch
 from Helpers.funciones import Funciones
 from Helpers.webScraping import WebScraping
@@ -21,10 +22,10 @@ MONGO_URI       = os.getenv("MONGO_URI")
 MONGO_DB        = os.getenv("MONGO_DB") or "proyecto_bigdata"
 MONGO_COLECCION = os.getenv("MONGO_COLECCION") or "usuario_roles"
 
-ELASTIC_CLOUD_URL     = os.getenv("ELASTIC_CLOUD_URL")
-ELASTIC_API_KEY       = os.getenv("ELASTIC_API_KEY")
+ELASTIC_CLOUD_URL = os.getenv("ELASTIC_CLOUD_URL")
+ELASTIC_API_KEY   = os.getenv("ELASTIC_API_KEY")
 
-# CORREGIDO ✔
+# índice por defecto
 ELASTIC_INDEX_DEFAULT = os.getenv("ELASTIC_INDEX_DEFAULT") or "index-boletin-semanal"
 
 app.secret_key = os.getenv("SECRET_KEY") or "Mpbm1234"
@@ -41,7 +42,11 @@ print("DEBUG ELASTIC_INDEX_DEFAULT:", repr(ELASTIC_INDEX_DEFAULT))
 
 # ================= INICIALIZAR CONEXIONES =================
 mongo = MongoDB(MONGO_URI, MONGO_DB)
-elastic = ElasticSearch(ELASTIC_CLOUD_URL, ELASTIC_API_KEY)
+elastic = ElasticSearch(
+    cloud_url=ELASTIC_CLOUD_URL,
+    api_key=ELASTIC_API_KEY,
+    default_index=ELASTIC_INDEX_DEFAULT
+)
 
 # ==================== RUTAS PÚBLICAS ====================
 
@@ -75,22 +80,26 @@ def buscador():
 
 @app.route("/buscar-elastic", methods=["POST"])
 def buscar_elastic():
-    """Realiza búsqueda en ElasticSearch"""
+    """Realiza búsqueda en ElasticSearch con filtros completos."""
     try:
-        data = request.get_json()
-        texto_buscar = (data.get("texto") or "").strip()
-        campo = data.get("campo", "_all")
+        data = request.get_json() or {}
+
+        texto_buscar  = (data.get("texto") or "").strip()
+        anio          = data.get("anio")
+        semana        = data.get("semana")
+        tipo_archivo  = data.get("tipo_archivo")
 
         if not texto_buscar:
             return jsonify({"success": False, "error": "Texto requerido"}), 400
 
-        # CORREGIDO ✔ rango_fechas en vez de "fechas"
-        query_base = {
-            "query": {
+        # ---------- MUST (texto completo) ----------
+        must_clause = [
+            {
                 "multi_match": {
                     "query": texto_buscar,
                     "fields": [
                         "tema_central^3",
+                        "temas_portada^2",
                         "semana_epidemiologica",
                         "rango_fechas",
                         "expertos_tematicos",
@@ -99,8 +108,30 @@ def buscar_elastic():
                     ]
                 }
             }
-        }
+        ]
 
+        # ---------- FILTER ----------
+        filter_clause = []
+
+        if anio:
+            try:
+                filter_clause.append({"term": {"anio": int(anio)}})
+            except:
+                pass
+
+        if semana:
+            filter_clause.append({"term": {"semana_epidemiologica": str(semana)}})
+
+        if tipo_archivo:
+            filter_clause.append({"term": {"tipo_archivo.keyword": tipo_archivo}})
+
+        bool_query = {"must": must_clause}
+        if filter_clause:
+            bool_query["filter"] = filter_clause
+
+        query_base = {"query": {"bool": bool_query}}
+
+        # ---------- AGREGACIONES ----------
         aggs = {
             "boletines_por_anio": {
                 "terms": {"field": "anio", "size": 20}
@@ -122,6 +153,7 @@ def buscar_elastic():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+
 # ==================== LOGIN ====================
 
 @app.route("/login", methods=["GET", "POST"])
@@ -130,7 +162,6 @@ def login():
         usuario = request.form.get("usuario", "").strip()
         password = request.form.get("password", "").strip()
 
-        # PLAN B – Login fijo
         if usuario == "administrador" and password == "Admin1234":
             session["usuario"] = usuario
             session["permisos"] = {
@@ -142,7 +173,6 @@ def login():
             flash("Inicio exitoso", "success")
             return redirect(url_for("admin"))
 
-        # PLAN A – Login desde Mongo
         user_data = mongo.validar_usuario(usuario, password, MONGO_COLECCION)
 
         if user_data:
@@ -183,10 +213,7 @@ def admin():
         creador=CREATOR_APP
     )
 
-# ==========================================================
-#   (El resto de CRUD Mongo + gestor de Elastic + carga ZIP)
-#   YA LO TENÍAS BIEN. No lo tocamos ─ se mantiene igual.
-# ==========================================================
+# ==================== CRUD Mongo (igual que antes) ====================
 
 @app.route("/listar-usuarios")
 def listar_usuarios():
@@ -199,32 +226,8 @@ def listar_usuarios():
         return jsonify({"error": str(e)}), 500
 
 
-# (AQUI SIGUEN TODAS TUS RUTAS EXACTAMENTE IGUAL — no se modifican)
-# Te las mantengo 1:1 ↓↓↓
-
-@app.route("/gestor_usuarios")
-def gestor_usuarios():
-    if not session.get("logged_in"):
-        flash("Inicia sesión", "warning")
-        return redirect(url_for("login"))
-
-    permisos = session.get("permisos", {})
-    if not permisos.get("admin_usuarios"):
-        flash("No tiene permisos", "danger")
-        return redirect(url_for("admin"))
-
-    return render_template(
-        "gestor_usuarios.html",
-        usuario=session.get("usuario"),
-        permisos=permisos,
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
-# ------- (RESTO DE CRUD USERS – SIN CAMBIOS) -------
-# ------- (GESTOR ELASTIC – SIN CAMBIOS) -----------
-
 # ==================== MAIN ====================
+
 if __name__ == "__main__":
     Funciones.crear_carpeta("static/uploads")
 

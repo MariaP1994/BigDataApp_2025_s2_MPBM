@@ -1,29 +1,12 @@
 {
     "semana_epidemiologica": "24",
-    "fechas": null,
+    "rango_fechas": "13 al 19 de junio de 2021",
     "tema_central": null,
-    "directora_general": "Dr. Franklyn Edwin Prieto Alvarado",
-    "expertos_tematicos": [
-        "El Instituto Nacional",
-        "Según Entidad Territorial",
-        "El Estudio Colaborativo Latinoamericano",
-        "Dengue\nInfección Respiratoria Aguda",
-        "Martha Lucia Ospina Martínez",
-        "Franklyn Edwin Prieto Alvarado",
-        "Salud Pública\nDra",
-        "Diana Marcela Walteros Acero",
-        "Salud Pública\nEditor\nDr",
-        "Hernán Quijada Bonilla\nSubdirector",
-        "Alexander Casas Castro",
-        "Situación Nacional\nGrupo Sivigila",
-        "Mortalidad\nGiana María Henriquez",
-        "Document\nMaría Eugenia Pinilla",
-        "Diana Alexa Forero Motta",
-        "Morbilidad\nAndrea Jineth Rodríguez",
-        "Sandra Milena Aparicio Fuentes",
-        "Carolina Ferro Mendez",
-        "Yudy Silva Lizarazo",
-        "Diana Lucero Rivera Gómez",
-        "Índice\nFiguras\nTablas\nEvento"
-    ]
+    "publicacion_en_linea": "http://www.bvscolombia.org/)",
+    "temas_portada": [
+        "Vigilancia en salud pública"
+    ],
+    "anio": 2021,
+    "tipo_archivo": "pdf",
+    "pdf_url": "https://www.ins.gov.co/BibliotecaDigital/2021-boletin-epidemiologico-semana-24.pdf"
 }
