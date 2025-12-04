@@ -1,14 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Buscador de documentos - BigData-MPBM{% endblock %}
+{% block title %}Buscador de documentos - BigData-MiProyecto{% endblock %}
 
 {% block extra_css %}
 <style>
-    body {
-        background-color: #0f172a !important;
-        color: #e5e7eb;
-    }
-
     .search-card {
         background: rgba(15, 23, 42, 0.9);
         border-radius: 18px;
@@ -74,6 +69,7 @@
         border-radius: 999px;
     }
 
+    /* Resultados */
     .result-card {
         margin-top: 1.8rem;
         background: rgba(15, 23, 42, 0.92);
@@ -87,6 +83,11 @@
         border-bottom: 1px solid rgba(75, 85, 99, 0.7);
     }
 
+    .result-header h5 {
+        margin: 0;
+        font-weight: 600;
+    }
+
     .badge-soft {
         background: rgba(34, 197, 94, 0.12);
         color: #bbf7d0;
@@ -95,17 +96,55 @@
         font-size: .7rem;
     }
 
+    .resultados-container {
+        margin-top: 1rem;
+    }
+
+    .aggs-list {
+        background: rgba(15, 23, 42, 0.9);
+        border-radius: 14px;
+        padding: 1rem 1rem .5rem;
+        max-height: 520px;
+        overflow-y: auto;
+        border: 1px dashed rgba(148, 163, 184, 0.4);
+        font-size: .85rem;
+    }
+
+    .aggs-item {
+        margin-bottom: .9rem;
+        padding-bottom: .7rem;
+        border-bottom: 1px solid rgba(55, 65, 81, 0.7);
+    }
+
+    .aggs-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+    }
+
+    .aggs-item h6 {
+        font-size: .78rem;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #9ca3af;
+        margin-bottom: .4rem;
+    }
+
     .tabla-resultados {
         max-height: 520px;
         overflow-y: auto;
         border-radius: 14px;
     }
 
+    .table-dark thead th {
+        border-color: #374151;
+    }
+
     .json-view {
         background-color: #020617;
         border-radius: .5rem;
         padding: .5rem .6rem;
-        font-family: "JetBrains Mono", monospace;
+        font-family: "JetBrains Mono", "Courier New", monospace;
         font-size: .74rem;
         white-space: pre-wrap;
         max-height: 170px;
@@ -119,69 +158,83 @@
         padding: 0;
     }
 
+    /* Spinner */
+    #div_cargando p {
+        color: #e5e7eb;
+    }
+
+    /* Modal */
     .modal-content {
         background: #020617;
         color: #e5e7eb;
     }
 
-    .modal-header,
-    .modal-footer {
-        border-color: #1f2937;
+    .modal-header {
+        border-bottom-color: #1f2937;
     }
 
-    #div_cargando p {
-        color: #e5e7eb;
+    .modal-footer {
+        border-top-color: #1f2937;
     }
 </style>
 {% endblock %}
 
+
 {% block content %}
 
-<!-- CABECERA -->
+<!-- CABECERA DE PÁGINA -->
 <div class="mb-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
             <div class="search-title">Módulo de consulta</div>
-            <h1 class="search-hero mb-1">Buscador de Boletines Epidemiológicos</h1>
+            <h1 class="search-hero mb-1">Buscador de boletines epidemiológicos</h1>
             <p class="search-subtitle mb-0">
-                Busca boletines indexados en ElasticSearch y filtra por texto, semana, año o tipo de archivo.
+                Explora los boletines semanales indexados en ElasticSearch. 
+                Escribe un texto libre y, si lo deseas, acota por año, semana o tipo de archivo.
             </p>
         </div>
-
         <div class="text-end small text-white-50">
-            Índice activo: <span class="badge-soft">{{ ELASTIC_INDEX_DEFAULT }}</span>
+            Índice por defecto: <span class="badge-soft">{{ ELASTIC_INDEX_DEFAULT if ELASTIC_INDEX_DEFAULT else 'N/D' }}</span><br>
+            Motor: ElasticSearch Cloud
         </div>
     </div>
 </div>
 
-<!-- FORMULARIO -->
+
+<!-- FORMULARIO DE BÚSQUEDA -->
 <div class="search-card mb-3">
     <form id="formBuscar" onsubmit="buscar(event)">
         <div class="row g-3 align-items-end">
 
+            <!-- Texto principal -->
             <div class="col-12 col-lg-6">
-                <label class="search-label">Texto</label>
+                <label class="search-label" for="textoBuscar">Texto a buscar</label>
                 <input type="text" class="form-control search-input" id="textoBuscar"
-                       placeholder="COVID, dengue, mortalidad semanal, etc." required>
+                       placeholder="Ej. COVID-19, mortalidad, vigilancia..."
+                       required>
+            </div>
+
+            <!-- Filtros opcionales -->
+            <div class="col-6 col-lg-2">
+                <label class="search-label" for="anioFiltro">Año</label>
+                <input type="number" min="2000" max="2100"
+                       class="form-control search-input"
+                       id="anioFiltro" placeholder="Ej. 2023">
             </div>
 
             <div class="col-6 col-lg-2">
-                <label class="search-label">Año</label>
-                <input type="number" class="form-control search-input" id="anioFiltro"
-                       min="2015" max="2030" placeholder="2022">
-            </div>
-
-            <div class="col-6 col-lg-2">
-                <label class="search-label">Semana</label>
-                <input type="number" class="form-control search-input" id="semanaFiltro"
-                       min="1" max="53" placeholder="1-53">
+                <label class="search-label" for="semanaFiltro">Semana</label>
+                <input type="number" min="1" max="53"
+                       class="form-control search-input"
+                       id="semanaFiltro" placeholder="1 - 53">
             </div>
 
             <div class="col-12 col-lg-2">
-                <label class="search-label">Tipo</label>
+                <label class="search-label" for="tipoFiltro">Tipo de archivo</label>
                 <select id="tipoFiltro" class="form-select search-select">
                     <option value="">Todos</option>
                     <option value="pdf">PDF</option>
+                    <option value="html">HTML</option>
                     <option value="json">JSON</option>
                 </select>
             </div>
@@ -189,175 +242,247 @@
 
         <div class="row mt-3 align-items-center">
             <div class="col-md-8 small text-white-50">
-                Puedes buscar por cualquier contenido del boletín: tema central, expertos, fechas, etc.
+                Puedes comenzar solo con el texto y luego ir refinando la búsqueda con los filtros.
             </div>
             <div class="col-md-4 text-md-end mt-2 mt-md-0">
                 <button class="btn btn-primary btn-search-main px-4">
-                    <i class="bi bi-search me-1"></i> Buscar
+                    <i class="bi bi-search me-1"></i> Buscar documentos
                 </button>
             </div>
         </div>
     </form>
 </div>
 
+
 <!-- LOADING -->
 <div id="div_cargando" class="text-center mt-4" style="display:none;">
     <div class="spinner-border text-light"></div>
-    <p class="mt-2">Buscando boletines...</p>
+    <p class="mt-2">Buscando documentos...</p>
 </div>
 
+
 <!-- RESULTADOS -->
-<div id="divResultados" style="display:none;">
+<div id="divResultados" class="resultados-container" style="display:none;">
     <div class="result-card">
-        <div class="card-header result-header d-flex justify-content-between">
+        <div class="card-header result-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
-                Resultados
-                <span class="badge-soft ms-2">Total: <span id="totalResultados">0</span></span>
+                Resultados de la búsqueda
+                <span class="badge-soft ms-2">
+                    Total: <span id="totalResultados">0</span>
+                </span>
             </h5>
+            <small class="text-white-50">
+                Resumen y detalle de los boletines encontrados.
+            </small>
         </div>
 
         <div class="card-body">
-            <div class="tabla-resultados">
-                <table class="table table-dark table-striped table-hover mb-0 align-middle">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>ID</th>
-                            <th>Score</th>
-                            <th>Semana</th>
-                            <th>Año</th>
-                            <th>Tema Central</th>
-                            <th>Expertos</th>
-                            <th>Detalle</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaResultados"></tbody>
-                </table>
+            <div class="row g-3">
+
+                <!-- AGGREGATIONS / RESUMEN (opcional) -->
+                <div class="col-md-3">
+                    <div class="aggs-list">
+                        <h6 class="mb-2">Resumen por facetas</h6>
+                        <div id="divAggregations"></div>
+                    </div>
+                </div>
+
+                <!-- TABLA RESULTADOS -->
+                <div class="col-md-9">
+                    <div class="tabla-resultados">
+                        <table class="table table-dark table-striped table-hover mb-0 align-middle">
+                            <thead>
+                                <tr>
+                                    <th style="width:40px;">#</th>
+                                    <th style="width:140px;">ID</th>
+                                    <th style="width:80px;">Score</th>
+                                    <th style="width:160px;">Índice</th>
+                                    <th>Resumen del boletín</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaResultados"></tbody>
+                        </table>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
 </div>
+
 
 <!-- ERROR -->
 <div id="divError" class="alert alert-danger mt-4" style="display:none;">
     <strong>Error:</strong> <span id="mensajeError"></span>
 </div>
 
+
 <!-- MODAL DETALLE -->
 <div class="modal fade" id="modalDetalle" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Detalle del boletín</h5>
+                <h5 class="modal-title">Detalle completo del boletín</h5>
                 <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" id="modalDetalleBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
 
 {% endblock %}
 
+
+
 {% block extra_js %}
 <script>
-let ultimaBusqueda = [];
+    // Guardamos los últimos hits para el modal
+    let ultimaBusqueda = [];
 
-// ---------------- BUSCAR ----------------
-function buscar(event) {
-    event.preventDefault();
+    // ---------- BUSCAR ----------
+    function buscar(event) {
+        event.preventDefault();
 
-    const texto = document.getElementById("textoBuscar").value.trim();
-    const anio = document.getElementById("anioFiltro").value.trim();
-    const semana = document.getElementById("semanaFiltro").value.trim();
-    const tipo = document.getElementById("tipoFiltro").value.trim();
+        const texto   = document.getElementById("textoBuscar").value.trim();
+        const anio    = document.getElementById("anioFiltro").value.trim();
+        const semana  = document.getElementById("semanaFiltro").value.trim();
+        const tipo    = document.getElementById("tipoFiltro").value;
 
-    if (!texto) {
-        alert("Ingrese un texto para buscar");
-        return;
-    }
-
-    document.getElementById("divResultados").style.display = "none";
-    document.getElementById("divError").style.display = "none";
-    document.getElementById("div_cargando").style.display = "block";
-
-    fetch("/buscar-elastic", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            texto: texto,
-            anio: anio || null,
-            semana: semana || null,
-            tipo_archivo: tipo || null
-        })
-    })
-    .then(r => r.json())
-    .then(data => {
-        document.getElementById("div_cargando").style.display = "none";
-
-        if (!data.success) {
-            mostrarError(data.error || "Error desconocido");
+        if (!texto) {
+            alert("Ingrese un texto para buscar.");
             return;
         }
 
-        mostrarResultados(data);
-    })
-    .catch(err => {
-        document.getElementById("div_cargando").style.display = "none";
-        mostrarError("Error de conexión o servidor");
-    });
-}
+        document.getElementById("divResultados").style.display = "none";
+        document.getElementById("divError").style.display = "none";
+        document.getElementById("div_cargando").style.display = "block";
 
-// ---------------- RESULTADOS ----------------
-function mostrarResultados(data) {
-    document.getElementById("totalResultados").textContent = data.total || 0;
+        fetch("/buscar-elastic", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                texto: texto,
+                campo: "_all",
+                anio: anio || null,
+                semana: semana || null,
+                tipo_archivo: tipo || null
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById("div_cargando").style.display = "none";
 
-    ultimaBusqueda = data.hits || [];
-    const tabla = document.getElementById("tablaResultados");
-    tabla.innerHTML = "";
+            if (!data.success) {
+                mostrarError(data.error || "Error desconocido en la búsqueda.");
+                return;
+            }
 
-    if (ultimaBusqueda.length === 0) {
-        tabla.innerHTML = "<tr><td colspan='8' class='text-center'>No hay resultados</td></tr>";
+            mostrarResultados(data);
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById("div_cargando").style.display = "none";
+            mostrarError("Error en el servidor o en la conexión.");
+        });
     }
 
-    ultimaBusqueda.forEach((hit, i) => {
-        const src = hit._source || {};
+    // ---------- MOSTRAR RESULTADOS ----------
+    function mostrarResultados(data) {
+        document.getElementById("totalResultados").textContent = data.total || 0;
 
-        const row = document.createElement("tr");
-        row.innerHTML = `
-            <td>${i+1}</td>
-            <td><code>${hit._id}</code></td>
-            <td>${hit._score?.toFixed(4) ?? "N/A"}</td>
-            <td>${src.semana_epidemiologica ?? "-"}</td>
-            <td>${src.anio ?? "-"}</td>
-            <td>${src.tema_central ?? "-"}</td>
-            <td>${(src.expertos_tematicos || []).join(", ")}</td>
-            <td>
-                <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                        data-bs-target="#modalDetalle"
-                        onclick="mostrarDetalle(${i})">
-                    Ver
-                </button>
-            </td>`;
-        tabla.appendChild(row);
-    });
+        mostrarAggregations(data.aggs || {});
+        ultimaBusqueda = data.resultados || data.hits || [];
+        mostrarHits(ultimaBusqueda);
 
-    document.getElementById("divResultados").style.display = "block";
-}
+        document.getElementById("divResultados").style.display = "block";
+    }
 
-// ---------------- ERROR ----------------
-function mostrarError(msg) {
-    document.getElementById("mensajeError").textContent = msg;
-    document.getElementById("divError").style.display = "block";
-}
+    // ---------- AGGREGATIONS (opcional) ----------
+    function mostrarAggregations(aggs) {
+        const cont = document.getElementById("divAggregations");
+        cont.innerHTML = "";
 
-// ---------------- DETALLE ----------------
-function mostrarDetalle(i) {
-    const hit = ultimaBusqueda[i];
-    const src = hit._source ?? {};
+        if (!aggs || Object.keys(aggs).length === 0) {
+            cont.innerHTML = "<p class='text-muted mb-0'>No hay facetas configuradas.</p>";
+            return;
+        }
 
-    document.getElementById("modalDetalleBody").innerHTML = `
-        <pre class="json-view">${JSON.stringify(src, null, 2)}</pre>
-    `;
-}
+        // Si más adelante agregas aggs específicas, las puedes pintar aquí.
+        for (const [nombre, agg] of Object.entries(aggs)) {
+            const div = document.createElement("div");
+            div.className = "aggs-item";
+            div.innerHTML = `<h6>${nombre}</h6><pre class="json-view mb-0">${JSON.stringify(agg, null, 2)}</pre>`;
+            cont.appendChild(div);
+        }
+    }
+
+    // ---------- TABLA DE HITS ----------
+    function mostrarHits(hits) {
+        const tabla = document.getElementById("tablaResultados");
+        tabla.innerHTML = "";
+
+        if (!hits || hits.length === 0) {
+            tabla.innerHTML =
+                "<tr><td colspan='5' class='text-center text-muted'>No se encontraron resultados.</td></tr>";
+            return;
+        }
+
+        hits.forEach((hit, i) => {
+            const src = hit._source || {};
+
+            const semana = src.semana_epidemiologica || "N/D";
+            const rango  = src.rango_fechas || "N/D";
+            const tema   = src.tema_central || "Sin tema central";
+            const publi  = src.publicacion_en_linea || "";
+
+            let resumenHtml = `
+                <strong>Semana epidemiológica:</strong> ${semana}<br>
+                <strong>Rango de fechas:</strong> ${rango}<br>
+                <strong>Tema central:</strong> ${tema}
+            `;
+
+            if (publi) {
+                resumenHtml += `<br><strong>Publicación en línea:</strong> ${publi}`;
+            }
+
+            const row = document.createElement("tr");
+            row.innerHTML =
+                "<td>" + (i + 1) + "</td>" +
+                "<td><code class='small'>" + (hit._id || "") + "</code></td>" +
+                "<td>" + (hit._score ? hit._score.toFixed(4) : "N/A") + "</td>" +
+                "<td><small class='text-white-50'>" + (hit._index || "") + "</small></td>" +
+                "<td>" +
+                    "<div class='json-view mb-1'>" + resumenHtml + "</div>" +
+                    "<button class='btn btn-link btn-link-detalle text-info' " +
+                        "onclick='mostrarDetalle(" + i + ")' " +
+                        "data-bs-toggle='modal' data-bs-target='#modalDetalle'>" +
+                        "<i class='bi bi-arrows-angle-expand me-1'></i>Ver JSON completo" +
+                    "</button>" +
+                "</td>";
+
+            tabla.appendChild(row);
+        });
+    }
+
+    // ---------- ERROR ----------
+    function mostrarError(msg) {
+        document.getElementById("mensajeError").textContent = msg;
+        document.getElementById("divError").style.display = "block";
+    }
+
+    // ---------- MODAL DETALLE ----------
+    function mostrarDetalle(i) {
+        const hit = ultimaBusqueda[i];
+        if (!hit) return;
+
+        const modalBody = document.getElementById("modalDetalleBody");
+        modalBody.innerHTML =
+            "<pre class='json-view' style='max-height:520px;overflow-y:auto;'>" +
+            JSON.stringify(hit._source || {}, null, 2) +
+            "</pre>";
+    }
 </script>
 {% endblock %}
