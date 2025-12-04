@@ -1,47 +1,164 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-sca  le=1.0">
-    <title>BigData-MPBM</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    <link href="{{ url_for('static', filename='css/landingPage.css') }}" rel="stylesheet">
-</head>
-<body>
-    <header class="header">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">BigData-MiProyecto</h1>
-                <nav>
-                    <ul class="nav">
-                        <li class="nav-item"><a class="nav-link" href="/buscador">Buscador</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/about">Acerca de</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/login">Ingresar</a></li>
-                    </ul>
-                </nav>
-            </div>
-        </div>
-    </header>
+{% extends "base.html" %}
 
-    <div class="container">
-        <h1 class="text-center">
-            Bienvenidos al proyecto de BigData<BR> 
-                creado por María Paula Barrero<br> 
-                como parte de <br>
-                un proyecto de clase<br> 
-                En la maestría de Analítica de Datos <br>
-                De la Universidad Central</h1>
+{% block title %}Inicio · BigData MPBM{% endblock %}
+
+{% block extra_css %}
+<style>
+
+    .hero-container {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 2rem;
+
+        background: rgba(15, 23, 42, 0.85);
+        border-radius: 22px;
+        padding: 2.8rem 3rem;
+        box-shadow: 0 20px 45px rgba(0,0,0,0.55);
+        border: 1px solid rgba(148,163,184,.25);
+        color: #f1f5f9;
+    }
+
+    .hero-title {
+        font-size: 2.8rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 1.1rem;
+    }
+
+    .hero-sub {
+        font-size: 1rem;
+        color: #cbd5e1;
+        margin-bottom: 1.5rem;
+    }
+
+    .maria-photo {
+        width: 240px;
+        height: 240px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid rgba(255,255,255,0.15);
+        box-shadow: 0 0 20px rgba(255,255,255,0.15);
+        transition: 0.25s ease;
+    }
+
+    .maria-photo:hover {
+        transform: scale(1.04);
+        box-shadow: 0 0 30px rgba(255,255,255,0.22);
+    }
+
+    .btn-start {
+        padding: 0.75rem 1.4rem;
+        font-size: 1.1rem;
+        border-radius: 10px;
+        transition: 0.25s ease;
+    }
+
+    .btn-start:hover {
+        transform: translateY(-2px);
+    }
+
+    .feature-section {
+        margin-top: 3rem;
+        text-align: center;
+    }
+
+    .feature-box {
+        background: rgba(15, 23, 42, .75);
+        border: 1px solid rgba(148,163,184,0.25);
+        border-radius: 16px;
+        padding: 1.5rem;
+        color: #e2e8f0;
+        height: 100%;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.4);
+        transition: 0.25s ease;
+    }
+
+    .feature-box:hover {
+        transform: translateY(-5px);
+        border-color: rgba(255,255,255,0.35);
+    }
+
+    .feature-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: .55rem;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container py-5">
+
+    <div class="hero-container">
+
+        <!-- TEXT SECTION -->
+        <div style="max-width: 520px;">
+            <h1 class="hero-title">
+                Proyecto BigData MPBM
+            </h1>
+
+            <p class="hero-sub">
+                Aplicación web desarrollada por <b>María Paula Barrero Montealegre</b><br>
+                como parte de la Maestría en Analítica de Datos – Universidad Central.<br><br>
+                Explora, busca, visualiza e interpreta datos reales usando MongoDB y ElasticSearch.
+            </p>
+
+            <a href="/login" class="btn btn-primary btn-start">
+                <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar al sistema
+            </a>
+        </div>
+
+        <!-- IMAGE SECTION -->
+        <div>
+            <img src="{{ url_for('static', filename='Images/creador.png') }}"
+                 class="maria-photo"
+                 alt="Foto de María Paula Barrero">
+        </div>
+
     </div>
 
-    <footer class="text-center">
-        <p class="mb-0">Creado por {{ creador }}</p>
-        <p class="mb-0" id="current-year"></p>
-        <p class="mb-0" id="version_app">{{ version }}</p>
-    </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-    <script>
-        document.getElementById('current-year').textContent = new Date().getFullYear();
-    </script>
-</body>
-</html> 
+    <!-- FEATURE CARDS -->
+    <div class="feature-section">
+
+        <h3 class="mb-4">¿Qué puedes hacer dentro del proyecto?</h3>
+
+        <div class="row g-4">
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <div class="feature-title"><i class="bi bi-search me-1"></i> Buscador Elastic</div>
+                    <p>
+                        Realiza consultas inteligentes, analiza documentos y explora agregaciones avanzadas para descubrir insights.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <div class="feature-title"><i class="bi bi-database me-1"></i> Gestión MongoDB</div>
+                    <p>
+                        Administra usuarios, colecciones y seguridad de manera centralizada usando acceso controlado por roles.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="feature-box">
+                    <div class="feature-title"><i class="bi bi-cloud-upload me-1"></i> Carga de datos</div>
+                    <p>
+                        Importa ZIP con JSON, indexa documentos o ejecuta scraping automático para poblar ElasticSearch.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

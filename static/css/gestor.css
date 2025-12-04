@@ -1,23 +1,224 @@
+/* ===== PALETA Y BASE ===== */
+:root {
+    --bg: #020617;
+    --bg-alt: #0f172a;
+    --card: rgba(15, 23, 42, 0.92);
+    --border-subtle: rgba(148, 163, 184, 0.35);
+    --text: #e5e7eb;
+    --muted: #94a3b8;
+    --accent: #60a5fa;
+    --accent-soft: rgba(96, 165, 250, 0.18);
+    --danger: #f97373;
+    --success: #22c55e;
+}
 
+/* Fondo general */
 body {
-    background: linear-gradient(to right, #f9cbac, #f7f7f1);
     min-height: 100vh;
     margin: 0;
     padding: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--text);
+    background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.35), transparent 55%),
+        radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.32), transparent 55%),
+        radial-gradient(circle at center, rgba(15, 23, 42, 0.98), #020617);
 }
+
+/* ===== HEADER (barra superior en admin / elastic / docs) ===== */
 .header {
-    background-color: rgba(138, 193, 242, 0.9);
-    padding: 1rem 0;
+    background: rgba(15, 23, 42, 0.94);
+    border-bottom: 1px solid var(--border-subtle);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 0.9rem 0;
 }
+
+.header h2,
+.header h3,
+.header h1 {
+    color: #f9fafb;
+}
+
+.header .nav-link {
+    color: var(--muted);
+    font-weight: 500;
+    font-size: 0.92rem;
+}
+
+.header .nav-link:hover {
+    color: var(--accent);
+}
+
+.header .nav-link.active,
+.header .nav-link b {
+    color: #f9fafb;
+}
+
+/* ===== CONTENEDOR PRINCIPAL (paneles admin / gestor) ===== */
 .container {
-    background-color: rgba(130, 180, 201, 0.9);
-    padding: 2rem;
-    border-radius: 10px;
-    margin-top: 2rem;
+    margin-top: 1.8rem;
+    margin-bottom: 2.2rem;
+    padding: 1.5rem 1.75rem;
+    border-radius: 20px;
+    background: linear-gradient(
+        135deg,
+        rgba(15, 23, 42, 0.96),
+        rgba(15, 23, 42, 0.90)
+    );
+    border: 1px solid var(--border-subtle);
+    box-shadow:
+        0 22px 45px rgba(0, 0, 0, 0.65),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
 }
+
+/* Títulos dentro del panel */
+.container h1,
+.container h3,
+.container h4,
+.container h5 {
+    color: #f9fafb;
+}
+
+/* Texto secundario */
+p,
+.small,
+.form-text {
+    color: var(--muted);
+}
+
+/* ===== CARDS (tarjetas en admin, documentos_elastic, gestor_elastic) ===== */
+.card {
+    background: var(--card);
+    border-radius: 18px;
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.8);
+    color: var(--text);
+}
+
+.card-header {
+    background: linear-gradient(
+        120deg,
+        rgba(15, 23, 42, 0.98),
+        rgba(30, 64, 175, 0.5)
+    );
+    border-bottom: 1px solid var(--border-subtle);
+    color: #e5e7eb;
+}
+
+/* ===== TABLAS ===== */
+.table {
+    color: var(--text);
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+    background-color: rgba(15, 23, 42, 0.85);
+}
+
+.table-striped > tbody > tr:nth-of-type(even) > * {
+    background-color: rgba(15, 23, 42, 0.70);
+}
+
+.table-hover > tbody > tr:hover > * {
+    background-color: rgba(30, 64, 175, 0.45);
+}
+
+.table thead.table-dark > tr > th {
+    background-color: rgba(15, 23, 42, 0.95);
+    border-bottom-color: rgba(148, 163, 184, 0.5);
+}
+
+/* Scroll en tablas largas */
+.table-responsive {
+    border-radius: 14px;
+    border: 1px solid rgba(30, 64, 175, 0.45);
+}
+
+/* ===== BOTONES ===== */
+.btn-primary {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    border-color: transparent;
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 0.6rem 1.3rem;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #1d4ed8, #6d28d9);
+}
+
+.btn-outline-light {
+    border-radius: 999px;
+    border-color: rgba(148, 163, 184, 0.7);
+    color: #e5e7eb;
+}
+
+.btn-outline-light:hover {
+    background-color: rgba(148, 163, 184, 0.15);
+    color: #f9fafb;
+}
+
+.btn-secondary {
+    border-radius: 999px;
+}
+
+/* Íconos / badges en tablas */
+.badge.bg-success {
+    background-color: rgba(34, 197, 94, 0.9) !important;
+}
+
+.badge.bg-warning {
+    background-color: rgba(234, 179, 8, 0.9) !important;
+}
+
+.badge.bg-danger {
+    background-color: rgba(239, 68, 68, 0.9) !important;
+}
+
+.badge.bg-secondary {
+    background-color: rgba(148, 163, 184, 0.9) !important;
+}
+
+/* ===== ALERTAS ===== */
+.alert {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.alert-warning {
+    background-color: rgba(234, 179, 8, 0.06);
+    color: #facc15;
+    border-color: rgba(234, 179, 8, 0.45);
+}
+
+.alert-info {
+    background-color: rgba(59, 130, 246, 0.08);
+    color: #bfdbfe;
+    border-color: rgba(59, 130, 246, 0.45);
+}
+
+/* ===== SPINNER / CARGANDO ===== */
+#div_cargando {
+    color: var(--muted);
+}
+
+/* ===== FOOTER ===== */
 footer {
-    background-color: rgba(80, 129, 242, 0.9);
-    padding: 1rem 0;
-    margin-top: 2rem;
-    color: #666;
+    background: transparent;
+    border-top: 1px solid rgba(148, 163, 184, 0.35);
+    padding: 1rem 0 1.2rem;
+    margin-top: 0;
+    text-align: center;
+    color: var(--muted);
+}
+
+/* Asegura que el texto del footer no sea gris claro de más */
+footer p {
+    margin-bottom: 0.1rem;
+}
+
+/* ===== UTILIDADES PEQUEÑAS ===== */
+hr {
+    border-color: rgba(148, 163, 184, 0.35);
+    opacity: 0.6;
 }

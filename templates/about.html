@@ -3,57 +3,136 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acerca de - BigData-MiProyecto</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-    <link href="{{ url_for('static', filename='css/landingPage.css') }}" rel="stylesheet">
+    <title>Panel de Administración - BigData</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+          rel="stylesheet" crossorigin="anonymous">
+
+    <!-- CSS del panel -->
+    <link href="{{ url_for('static', filename='css/gestor.css') }}" rel="stylesheet">
 </head>
-<body>
-    <header class="header">
+<body class="bg-app">
+
+    <!-- HEADER -->
+    <header class="header shadow-sm">
         <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <h1 class="h3 mb-0">BigData-MiProyecto</h1>
+            <div class="d-flex justify-content-between align-items-center py-2">
+                <div>
+                    <h2 class="h5 mb-0 text-white fw-bold">
+                        BigData-MiProyecto
+                    </h2>
+                    <small class="text-white-50">
+                        Panel de administración · Usuario:
+                        <strong>{{ usuario }}</strong>
+                    </small>
+                </div>
+
                 <nav>
-                    <ul class="nav">
-                        <li class="nav-item"><a class="nav-link" href="/">Inicio</a></li>
-                        <li class="nav-item"><a class="nav-link" href="/buscador">Buscador</a></li>
-                        <li class="nav-item"><a class="nav-link active" href="/about"><b>Acerca de</b></a></li>
-                        <li class="nav-item"><a class="nav-link" href="/login">Ingresar</a></li>                        
+                    <ul class="nav align-items-center">
+
+                        <!-- Ir al inicio público -->
+                        <li class="nav-item me-2">
+                            <a class="nav-link text-white-50" href="/">Inicio</a>
+                        </li>
+
+                        <!-- Cerrar sesión real -->
+                        <li class="nav-item">
+                            <a class="btn btn-logout-nav" href="/logout">Cerrar sesión</a>
+                        </li>
                     </ul>
                 </nav>
             </div>
         </div>
     </header>
 
-    <div class="container">
-        <h1 class="text-center mb-4">BigData-MiProyecto</h1>
-        <h3 class="text-center mb-4">Descripción del Proyecto</h3>
-        <p class="text-center mb-4">Este proyecto es una aplicación web desarrollada para la gestión y análisis de datos utilizando MongoDB. Permite a los usuarios explorar bases de datos, visualizar colecciones y realizar consultas avanzadas sobre grandes volúmenes de información.</p>
-        
-        <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <img src="static/Images/creador.png" alt="Foto del creador" class="profile-img">
-                <h4>XYZ</h4>
-                <p>Estudiante de Maestría en Analítica de Datos</p>
-                <p>Universidad Central</p>
-                
-                <div class="social-links mt-3">
-                    <a href="https://github.com/xyz" target="_blank" class="btn btn-primary">GitHub</a>
-                    <a href="https://linkedin.com/in/xyz" target="_blank" class="btn btn-warning">LinkedIn</a>
-                    <a href="https://twitter.com/xyz" target="_blank"  class="btn btn-success">Twitter</a>
+    <!-- CONTENIDO -->
+    <main class="container py-5">
+        <div class="admin-card mx-auto p-4 p-md-5">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+                <div>
+                    <h1 class="h4 fw-bold mb-1">Panel de Administración</h1>
+                    <p class="text-muted mb-0">
+                        Desde aquí puedes gestionar usuarios, índices de Elastic y carga de archivos,
+                        según tus permisos de rol.
+                    </p>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <!-- GESTIONAR USUARIOS -->
+                <div class="col-md-4">
+                    <div class="admin-option h-100 {% if not (permisos and permisos.get('admin_usuarios')) %}admin-option-disabled{% endif %}">
+                        <h5 class="fw-semibold mb-2">Gestión de usuarios</h5>
+                        <p class="text-muted small mb-3">
+                            Crear, editar y eliminar usuarios del sistema y asignar roles.
+                        </p>
+
+                        {% if permisos and permisos.get('admin_usuarios') %}
+                            <a href="/gestor_usuarios" class="btn btn-admin w-100">
+                                Abrir gestor de usuarios
+                            </a>
+                        {% else %}
+                            <div class="alert alert-warning py-2 px-3 small mb-0">
+                                No tienes permiso <code>admin_usuarios</code>.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- GESTIONAR ELASTIC -->
+                <div class="col-md-4">
+                    <div class="admin-option h-100 {% if not (permisos and permisos.get('admin_elastic')) %}admin-option-disabled{% endif %}">
+                        <h5 class="fw-semibold mb-2">Administrar ElasticSearch</h5>
+                        <p class="text-muted small mb-3">
+                            Consultar índices, ejecutar consultas y revisar el estado del cluster.
+                        </p>
+
+                        {% if permisos and permisos.get('admin_elastic') %}
+                            <a href="/gestor_elastic" class="btn btn-admin w-100">
+                                Abrir panel Elastic
+                            </a>
+                        {% else %}
+                            <div class="alert alert-warning py-2 px-3 small mb-0">
+                                No tienes permiso <code>admin_elastic</code>.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- CARGAR ARCHIVOS A ELASTIC -->
+                <div class="col-md-4">
+                    <div class="admin-option h-100 {% if not (permisos and permisos.get('admin_data_elastic')) %}admin-option-disabled{% endif %}">
+                        <h5 class="fw-semibold mb-2">Carga de archivos a Elastic</h5>
+                        <p class="text-muted small mb-3">
+                            Subir archivos JSON (ZIP) o documentos procesados para indexarlos en Elastic.
+                        </p>
+
+                        {% if permisos and permisos.get('admin_data_elastic') %}
+                            <a href="/cargar_doc_elastic" class="btn btn-admin w-100">
+                                Abrir cargador de datos
+                            </a>
+                        {% else %}
+                            <div class="alert alert-warning py-2 px-3 small mb-0">
+                                No tienes permiso <code>admin_data_elastic</code>.
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <footer class="text-center">
+    <!-- FOOTER -->
+    <footer class="text-center text-white-50 small py-3">
         <p class="mb-0">Creado por {{ creador }}</p>
+        <p class="mb-0">Versión {{ version }}</p>
         <p class="mb-0" id="current-year"></p>
-        <p class="mb-0" id="version_app">{{ version }}</p>
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq4cvVmFh9vju3MXgpoK" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            crossorigin="anonymous"></script>
     <script>
         document.getElementById('current-year').textContent = new Date().getFullYear();
     </script>
 </body>
-</html> 
+</html>
