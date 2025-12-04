@@ -9,8 +9,21 @@ from Helpers.elastic import ElasticSearch
 from Helpers.funciones import Funciones
 from Helpers.webScraping import WebScraping
 
+import inspect
+import Helpers.elastic as elastic_mod
+
+print("=== DEBUG ELASTIC ===")
+print("elastic_mod.__file__ ->", elastic_mod.__file__)
+print("ElasticSearch obj ->", ElasticSearch)
+print("type(ElasticSearch) ->", type(ElasticSearch))
+print("Es clase?", isinstance(ElasticSearch, type))
+try:
+    print("Firma de _init:", inspect.signature(ElasticSearch.init_))
+except Exception as e:
+    print("No se pudo inspeccionar __init__:", e)
+print("=== FIN DEBUG ELASTIC ===")
+
 # ================= CARGAR VARIABLES DE ENTORNO =================
-from dotenv import load_dotenv
 load_dotenv("env.txt")
 
 app = Flask(__name__)

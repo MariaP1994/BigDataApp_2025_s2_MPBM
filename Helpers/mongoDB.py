@@ -1,9 +1,6 @@
-print(">>> CARGANDO Helpers.mongoDB DESDE:", __file__)
-
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from typing import Dict, List, Optional
-import hashlib
 
 
 class MongoDB:
@@ -26,24 +23,21 @@ class MongoDB:
         try:
             self.client.admin.command("ping")
             return True
-        except ConnectionFailure:
+        except ConnectionFailure as e:
+            print(f"Error de conexión a MongoDB: {e}")
             return False
 
     def validar_usuario(self, usuario: str, password: str, coleccion: str) -> Optional[Dict]:
         """
         Valida usuario y contraseña.
 
-        AHORA MISMO usamos la contraseña en plano (sin MD5),
+        Usamos la contraseña en plano (sin MD5),
         porque así la guardaste en la colección.
         """
         try:
-            # OJO: si después quieres MD5:
-            # password_md5 = hashlib.md5(password.encode()).hexdigest()
-            password_plain = password
-
             user = self.db[coleccion].find_one({
                 "usuario": usuario,
-                "password": password_plain
+                "password": password
             })
             return user
         except Exception as e:
@@ -69,12 +63,9 @@ class MongoDB:
     def crear_usuario(self, usuario: str, password: str, permisos: Dict, coleccion: str) -> bool:
         """Crea un nuevo usuario."""
         try:
-            # Igual que en validar_usuario: guardamos en plano
-            password_plain = password
-
             documento = {
                 "usuario": usuario,
-                "password": password_plain,
+                "password": password,
                 "permisos": permisos
             }
             self.db[coleccion].insert_one(documento)
@@ -86,7 +77,6 @@ class MongoDB:
     def actualizar_usuario(self, usuario: str, nuevos_datos: Dict, coleccion: str) -> bool:
         """Actualiza un usuario existente."""
         try:
-            # Si en algún momento quieres aplicar MD5, se haría aquí.
             self.db[coleccion].update_one(
                 {"usuario": usuario},
                 {"$set": nuevos_datos}
