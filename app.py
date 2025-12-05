@@ -1,3 +1,4 @@
+# -- coding: utf-8 --
 from flask import (
     Flask, render_template, request, redirect,
     url_for, jsonify, session, flash
@@ -55,9 +56,9 @@ def landing():
         creador=CREATOR_APP
     )
 
-
 @app.route("/about")
 def about():
+    # úsala solo si tienes about.html
     return render_template(
         "about.html",
         version=VERSION_APP,
@@ -68,7 +69,6 @@ def about():
 
 @app.route("/buscador")
 def buscador():
-    """Página del buscador de boletines."""
     return render_template(
         "buscador.html",
         version=VERSION_APP,
@@ -79,59 +79,50 @@ def buscador():
 
 @app.route("/buscar-elastic", methods=["POST"])
 def buscar_elastic():
-    """
-    Realiza búsqueda en ElasticSearch sobre el índice de boletines.
-
-    Campos del documento (ejemplo):
-        semana_epidemiologica: "29"
-        rango_fechas: "12 al 18 de julio de 2020"
-        tema_central: "Comportamiento de la Vigilancia"
-        publicacion_en_linea: "https://doi.org/..."
-        temas_portada: [ "Situación nacional", "Mortalidad", ... ]
-        anio: 2019
-        tipo_archivo: "pdf"
-        pdf_url: "https://www.ins.gov.co/..."
-    """
+    """Realiza búsqueda en ElasticSearch."""
     try:
-        data = request.get_json() or {}
-        texto_buscar = (data.get("texto") or "").strip()
-        anio_filtro = (data.get("anio") or "").strip()
-        semana_filtro = (data.get("semana") or "").strip()
+        # ACEPTA SIEMPRE JSON Y EVITA QUE data SEA None
+        data = request.get_json(force=True) or {}
+        print("DEBUG /buscar-elastic PAYLOAD:", data)
 
-        # Para evitar búsquedas vacías gigantes
-        if not texto_buscar and not anio_filtro and not semana_filtro:
+        texto_buscar = (data.get("texto") or "").strip()
+        anio_filtro   = (data.get("anio") or "").strip()
+        semana_filtro = (data.get("semana") or "").strip()
+        tipo_archivo  = (data.get("tipo_archivo") or "").strip()
+
+        if not (texto_buscar or anio_filtro or semana_filtro):
             return jsonify({
                 "success": False,
-                "error": "Debes ingresar al menos texto, año o semana."
+                "error": "Debe ingresar texto, año o semana para buscar."
             }), 400
 
-        # Query principal: buscamos texto en varios campos
-        must_clauses = []
+        # ------------------ QUERY BASE ------------------
+        query_base = {
+            "bool": {
+                "must": [],
+                "filter": [],
+            }
+        }
+
+        # Si hay texto, lo buscamos en varios campos
         if texto_buscar:
-            must_clauses.append({
+            query_base["bool"]["must"].append({
                 "multi_match": {
                     "query": texto_buscar,
                     "fields": [
                         "tema_central^3",
                         "temas_portada^2",
-                        "publicacion_en_linea",
                         "rango_fechas",
+                        "publicacion_en_linea",
                         "semana_epidemiologica",
                     ]
                 }
             })
         else:
-            # Si no hay texto, usamos match_all
-            must_clauses.append({"match_all": {}})
+            # si no hay texto, al menos hacemos un match_all
+            query_base["bool"]["must"].append({"match_all": {}})
 
-        query_base = {
-            "bool": {
-                "must": must_clauses,
-                "filter": []
-            }
-        }
-
-        # Filtro por año (campo entero 'anio')
+        # Filtro por año
         if anio_filtro:
             try:
                 anio_int = int(anio_filtro)
@@ -139,42 +130,39 @@ def buscar_elastic():
             except ValueError:
                 pass
 
-        # Filtro por semana (campo string 'semana_epidemiologica')
+        # Filtro por semana
         if semana_filtro:
-            query_base["bool"]["filter"].append(
-                {"term": {"semana_epidemiologica": str(semana_filtro)}}
-            )
+            query_base["bool"]["filter"].append({
+                "term": {"semana_epidemiologica": str(semana_filtro)}
+            })
 
-        # Opcional: solo PDF (por si tu índice tiene otros tipos)
-        query_base["bool"]["filter"].append({"term": {"tipo_archivo": "pdf"}})
+        # Filtro opcional por tipo de archivo
+        if tipo_archivo:
+            query_base["bool"]["filter"].append({
+                "term": {"tipo_archivo.keyword": tipo_archivo}
+            })
 
-        # Agregaciones de ejemplo (por año y por tema de portada)
-        aggs = {
-            "boletines_por_anio": {
-                "terms": {"field": "anio", "size": 30}
-            },
-            "boletines_por_tema_portada": {
-                "terms": {"field": "temas_portada.keyword", "size": 50}
-            },
-        }
+        print("DEBUG /buscar-elastic QUERY:", query_base)
 
         resultado = elastic.buscar(
             index=ELASTIC_INDEX_DEFAULT,
             query={"query": query_base},
-            aggs=aggs,
-            size=200,   # hasta 200 resultados
+            aggs=None,
+            size=200,
         )
 
         return jsonify(resultado)
 
     except Exception as e:
-        print("Error en /buscar-elastic:", e)
+        print("ERROR /buscar-elastic:", e)
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ==================== LOGIN ====================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    error_message = None
+
     if request.method == "POST":
         usuario = request.form.get("usuario", "").strip()
         password = request.form.get("password", "").strip()
@@ -201,14 +189,14 @@ def login():
             flash("Inicio exitoso", "success")
             return redirect(url_for("admin"))
         else:
-            flash("Usuario o contraseña incorrectos", "danger")
+            error_message = "Usuario o contraseña incorrectos"
 
     return render_template(
         "login.html",
         version=VERSION_APP,
         creador=CREATOR_APP,
+        error_message=error_message
     )
-
 
 @app.route("/logout")
 def logout():
@@ -243,7 +231,6 @@ def listar_usuarios():
         return jsonify(usuarios)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 @app.route("/gestor_usuarios")
 def gestor_usuarios():

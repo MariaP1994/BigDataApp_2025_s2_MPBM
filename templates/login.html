@@ -21,9 +21,7 @@
     color: #e2e8f0;
     overflow: hidden;
   }
-  .left-pane {
-    padding: 2rem 2rem 2rem 2rem;
-  }
+  .left-pane { padding: 2rem; }
   .right-pane {
     background: linear-gradient(135deg, rgba(59,130,246,.18), rgba(236,72,153,.18));
     border-left: 1px solid rgba(148,163,184,.25);
@@ -35,11 +33,7 @@
     letter-spacing: .2px;
     margin-bottom: .25rem;
   }
-  .brand-sub {
-    color: #cbd5e1; 
-    font-size: .95rem;
-    margin-bottom: 1.5rem;
-  }
+  .brand-sub { color: #cbd5e1; font-size: .95rem; margin-bottom: 1.5rem; }
   .form-label { color: #cbd5e1; }
   .form-control {
     background: rgba(2,6,23,.35);
@@ -52,27 +46,10 @@
     border-color: #60a5fa;
     box-shadow: 0 0 0 .2rem rgba(96,165,250,.25);
   }
-  .btn-primary {
-    border-radius: 10px;
-    padding: .75rem 1.2rem;
-  }
-  .muted {
-    color: #94a3b8;
-    font-size: .9rem;
-  }
-  .divider {
-    height: 1px;
-    background: rgba(148,163,184,.2);
-    margin: 1.2rem 0;
-  }
-  .helper-link { color: #93c5fd; text-decoration: none; }
-  .helper-link:hover { text-decoration: underline; }
-  .list-users-btn {
-    border-radius: 10px;
-  }
-  #div_cargando {
-    display: none;
-  }
+  .btn-primary { border-radius: 10px; padding: .75rem 1.2rem; }
+  .muted { color: #94a3b8; font-size: .9rem; }
+  .divider { height: 1px; background: rgba(148,163,184,.2); margin: 1.2rem 0; }
+  #div_cargando { display:none; }
 </style>
 {% endblock %}
 
@@ -80,7 +57,7 @@
 
 <div class="auth-wrap container">
   <div class="glass-card row g-0">
-    <!-- LEFT: Formulario -->
+    <!-- LEFT -->
     <div class="col-12 col-lg-6 left-pane">
       <div class="d-flex align-items-center gap-2 mb-2">
         <i class="bi bi-shield-lock-fill fs-4 text-primary"></i>
@@ -124,9 +101,6 @@
           <button type="submit" class="btn btn-primary">
             <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar
           </button>
-          <button type="button" class="btn btn-outline-light list-users-btn" data-bs-toggle="modal" data-bs-target="#modalUsuarios" onclick="listarUsuarios()">
-            <i class="bi bi-people"></i> Ver usuarios (solo nombres y permisos)
-          </button>
         </div>
 
         <div class="divider"></div>
@@ -136,7 +110,7 @@
       </form>
     </div>
 
-    <!-- RIGHT: Branding / CTA -->
+    <!-- RIGHT -->
     <div class="col-12 col-lg-6 right-pane d-flex flex-column justify-content-between">
       <div>
         <h4 class="fw-bold mb-2">Proyecto BigData MPBM</h4>
@@ -149,7 +123,8 @@
       </div>
 
       <div class="text-center">
-        <img src="{{ url_for('static', filename='images/creador.png') }}"
+        <!-- MISMA RUTA DE LA FOTO -->
+        <img src="{{ url_for('static', filename='Images/creador.png') }}"
              alt="María Paula Barrero"
              style="width:180px;height:180px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,.25);box-shadow:0 0 18px rgba(255,255,255,.18);">
         <p class="mt-3 mb-0 muted">Creado por {{ creador }} · v{{ version }}</p>
@@ -157,46 +132,11 @@
     </div>
   </div>
 
-  <!-- Spinner -->
   <div id="div_cargando" class="text-center mt-4">
     <div class="spinner-border text-primary" role="status">
       <span class="visually-hidden">Cargando...</span>
     </div>
-    <p class="mt-2">Procesando su solicitud... esto puede demorar algunos segundos</p>
-  </div>
-</div>
-
-<!-- Modal listado de usuarios (sin contraseñas) -->
-<div class="modal fade" id="modalUsuarios" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable">
-    <div class="modal-content" style="background:#0f172a;color:#e2e8f0;border:1px solid rgba(148,163,184,.25);">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-people me-1"></i> Usuarios y Permisos</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        <div class="table-responsive">
-          <table class="table table-sm table-striped table-borderless align-middle">
-            <thead>
-              <tr class="text-uppercase" style="color:#cbd5e1;">
-                <th>Usuario</th>
-                <th>Login</th>
-                <th>Admin Usuarios</th>
-                <th>Admin Elastic</th>
-                <th>Admin Data Elastic</th>
-              </tr>
-            </thead>
-            <tbody id="tablaUsuarios">
-              <tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <p class="mt-2 muted">Las contraseñas no se muestran por seguridad.</p>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-outline-light" data-bs-dismiss="modal">Cerrar</button>
-      </div>
-    </div>
+    <p class="mt-2">Procesando su solicitud...</p>
   </div>
 </div>
 
@@ -221,43 +161,6 @@
     if (btn) btn.disabled = true;
     document.getElementById('div_cargando').style.display = 'block';
     return true;
-  }
-
-  function badge(valTrue) {
-    return (valTrue === true || valTrue === 'true')
-      ? '<span class="badge bg-success">Sí</span>'
-      : '<span class="badge bg-secondary">No</span>';
-  }
-
-  async function listarUsuarios() {
-    const tbody = document.getElementById('tablaUsuarios');
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>';
-    try {
-      const r = await fetch('{{ url_for("listar_usuarios") }}');
-      const data = await r.json();
-
-      tbody.innerHTML = '';
-      if (!Array.isArray(data) || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No hay usuarios</td></tr>';
-        return;
-      }
-
-      data.forEach(u => {
-        const p = u.permisos || {};
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${u.usuario || ''}</td>
-          <td>${badge(p.login)}</td>
-          <td>${badge(p.admin_usuarios)}</td>
-          <td>${badge(p.admin_elastic)}</td>
-          <td>${badge(p.admin_data_elastic)}</td>
-        `;
-        tbody.appendChild(tr);
-      });
-    } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Error al cargar usuarios</td></tr>';
-      console.error(e);
-    }
   }
 </script>
 {% endblock %}

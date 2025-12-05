@@ -4,9 +4,7 @@
 
 {% block extra_css %}
 <style>
-  .buscador-wrap {
-    margin-top: 1.5rem;
-  }
+  .buscador-wrap { margin-top: 1.5rem; }
   .buscador-card {
     background: #f9fafb;
     border-radius: 18px;
@@ -26,49 +24,60 @@
     background: #111827;
     color: #f9fafb;
   }
-  .pdf-btn {
-    padding: .25rem .6rem;
-    font-size: .78rem;
+  .pdf-btn { padding: .25rem .6rem; font-size: .78rem; }
+  .small-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #e5e7eb;
   }
+  #estadoBusqueda { font-size: .9rem; color:#6b7280; }
 </style>
 {% endblock %}
 
 {% block content %}
-
 <div class="container buscador-wrap">
 
-  <h2 class="text-center mb-4 fw-bold">Buscador de documentos</h2>
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="fw-bold mb-0">Buscador de documentos</h2>
+    <img src="{{ url_for('static', filename='Images/creador.png') }}"
+         class="small-avatar"
+         alt="María Paula Barrero">
+  </div>
 
-  <!-- FILTROS -->
+  <!-- FORMULARIO -->
   <div class="buscador-card">
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label">Texto a buscar</label>
-        <input id="txtTexto" type="text" class="form-control"
-               placeholder="Ej: dengue, mortalidad, brotes...">
+    <form id="formBusqueda" onsubmit="buscarElastic(); return false;">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Texto a buscar</label>
+          <input id="txtTexto" type="text" class="form-control"
+                 placeholder="Ej: vigilancia, mortalidad, brotes...">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Año</label>
+          <input id="txtAnio" type="number" min="2000" max="2100"
+                 class="form-control" placeholder="Ej: 2019">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Semana epidemiológica</label>
+          <input id="txtSemana" type="number" min="1" max="53"
+                 class="form-control" placeholder="Ej: 29">
+        </div>
       </div>
-      <div class="col-md-3">
-        <label class="form-label">Año</label>
-        <input id="txtAnio" type="number" min="2000" max="2100"
-               class="form-control" placeholder="Ej: 2019">
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">Semana epidemiológica</label>
-        <input id="txtSemana" type="number" min="1" max="53"
-               class="form-control" placeholder="Ej: 29">
-      </div>
-    </div>
 
-    <div class="text-end mt-3">
-      <button class="btn btn-primary" onclick="buscarElastic()">
-        <i class="bi bi-search"></i> Buscar
-      </button>
-    </div>
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <span id="estadoBusqueda"></span>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search"></i> Buscar
+        </button>
+      </div>
+    </form>
   </div>
 
   <!-- RESULTADOS -->
   <div id="divResultados" class="result-card" style="display:none;">
-
     <h5 class="mb-3">
       Resultados de la búsqueda (<span id="totalResultados">0</span>)
     </h5>
@@ -86,20 +95,19 @@
             <th>PDF</th>
           </tr>
         </thead>
-        <tbody id="tablaResultados">
-          <!-- filas dinámicas -->
-        </tbody>
+        <tbody id="tablaResultados"></tbody>
       </table>
     </div>
-
   </div>
-
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
+  function setEstado(msg) {
+    document.getElementById("estadoBusqueda").textContent = msg || "";
+  }
+
   function buscarElastic() {
     const texto  = document.getElementById("txtTexto").value.trim();
     const anio   = document.getElementById("txtAnio").value.trim();
@@ -112,20 +120,24 @@
 
     const payload = { texto, anio, semana };
 
-    fetch("/buscar-elastic", {
+    setEstado("Buscando...");
+    console.log("ENVIANDO A /buscar-elastic:", payload);
+
+    fetch("{{ url_for('buscar_elastic') }}", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(data => {
-      console.log("RESP BUSCADOR:", data);
-
+      console.log("RESPUESTA /buscar-elastic:", data);
       if (!data.success) {
+        setEstado("Error: " + (data.error || "Error desconocido"));
         alert("Error en la búsqueda: " + (data.error || "Error desconocido"));
         return;
       }
 
+      setEstado("");
       const divResultados = document.getElementById("divResultados");
       const tabla         = document.getElementById("tablaResultados");
       const totalSpan     = document.getElementById("totalResultados");
@@ -141,13 +153,14 @@
 
       data.hits.forEach(hit => {
         const d = hit._source || {};
-
         const anio    = d.anio ?? "-";
         const semana  = d.semana_epidemiologica ?? "-";
         const rango   = d.rango_fechas ?? "-";
         const tema    = d.tema_central ?? "(Sin tema)";
         const pub     = d.publicacion_en_linea ?? "(Sin información)";
-        const temas   = Array.isArray(d.temas_portada) ? d.temas_portada.join(", ") : (d.temas_portada || "-");
+        const temas   = Array.isArray(d.temas_portada)
+                        ? d.temas_portada.join(", ")
+                        : (d.temas_portada || "-");
         const pdf     = d.pdf_url || null;
 
         const fila = `
@@ -167,11 +180,11 @@
         `;
         tabla.insertAdjacentHTML("beforeend", fila);
       });
-
     })
     .catch(err => {
-      console.error(err);
-      alert("Error al consultar Elastic (revisa consola del navegador).");
+      console.error("ERROR FETCH /buscar-elastic:", err);
+      setEstado("Error al consultar Elastic.");
+      alert("Error al consultar Elastic.");
     });
   }
 </script>
