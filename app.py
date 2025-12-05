@@ -79,84 +79,65 @@ def buscador():
 
 @app.route("/buscar-elastic", methods=["POST"])
 def buscar_elastic():
-    """Realiza búsqueda en ElasticSearch."""
     try:
-        # ACEPTA SIEMPRE JSON Y EVITA QUE data SEA None
-        data = request.get_json(force=True) or {}
-        print("DEBUG /buscar-elastic PAYLOAD:", data)
+        data = request.get_json()
 
-        texto_buscar = (data.get("texto") or "").strip()
-        anio_filtro   = (data.get("anio") or "").strip()
-        semana_filtro = (data.get("semana") or "").strip()
-        tipo_archivo  = (data.get("tipo_archivo") or "").strip()
+        texto = (data.get("texto") or "").strip()
+        anio = data.get("anio")
+        semana = data.get("semana")
 
-        if not (texto_buscar or anio_filtro or semana_filtro):
-            return jsonify({
-                "success": False,
-                "error": "Debe ingresar texto, año o semana para buscar."
-            }), 400
+        if not texto:
+            return jsonify({"success": False, "error": "Debe ingresar un texto"}), 400
 
-        # ------------------ QUERY BASE ------------------
-        query_base = {
-            "bool": {
-                "must": [],
-                "filter": [],
+        # -------------------------------
+        #  QUERY ADAPTADA A TU JSON REAL
+        # -------------------------------
+        query_body = {
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "multi_match": {
+                                "query": texto,
+                                "fields": [
+                                    "tema_central^3",
+                                    "temas_portada^2",
+                                    "rango_fechas",
+                                    "publicacion_en_linea",
+                                    "_all"
+                                ]
+                            }
+                        }
+                    ],
+                    "filter": []
+                }
             }
         }
 
-        # Si hay texto, lo buscamos en varios campos
-        if texto_buscar:
-            query_base["bool"]["must"].append({
-                "multi_match": {
-                    "query": texto_buscar,
-                    "fields": [
-                        "tema_central^3",
-                        "temas_portada^2",
-                        "rango_fechas",
-                        "publicacion_en_linea",
-                        "semana_epidemiologica",
-                    ]
-                }
-            })
-        else:
-            # si no hay texto, al menos hacemos un match_all
-            query_base["bool"]["must"].append({"match_all": {}})
-
-        # Filtro por año
-        if anio_filtro:
+        # FILTRO POR AÑO
+        if anio:
             try:
-                anio_int = int(anio_filtro)
-                query_base["bool"]["filter"].append({"term": {"anio": anio_int}})
-            except ValueError:
+                query_body["query"]["bool"]["filter"].append({"term": {"anio": int(anio)}})
+            except:
                 pass
 
-        # Filtro por semana
-        if semana_filtro:
-            query_base["bool"]["filter"].append({
-                "term": {"semana_epidemiologica": str(semana_filtro)}
-            })
+        # FILTRO POR SEMANA
+        if semana:
+            query_body["query"]["bool"]["filter"].append(
+                {"term": {"semana_epidemiologica": semana}}
+            )
 
-        # Filtro opcional por tipo de archivo
-        if tipo_archivo:
-            query_base["bool"]["filter"].append({
-                "term": {"tipo_archivo.keyword": tipo_archivo}
-            })
-
-        print("DEBUG /buscar-elastic QUERY:", query_base)
-
+        # EJECUTAR BÚSQUEDA
         resultado = elastic.buscar(
-            index=ELASTIC_INDEX_DEFAULT,
-            query={"query": query_base},
-            aggs=None,
-            size=200,
+            index="index-boletin-semanal",
+            query=query_body,
+            size=200
         )
 
         return jsonify(resultado)
 
     except Exception as e:
-        print("ERROR /buscar-elastic:", e)
         return jsonify({"success": False, "error": str(e)}), 500
-
 # ==================== LOGIN ====================
 
 @app.route("/login", methods=["GET", "POST"])
