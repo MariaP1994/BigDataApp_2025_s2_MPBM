@@ -4,6 +4,7 @@ from flask import (
 )
 from dotenv import load_dotenv
 import os
+import json
 
 # ====== IMPORTS DE NUESTROS MÓDULOS ======
 from Helpers.mongoDB import MongoDB
@@ -64,7 +65,7 @@ def about():
         creador=CREATOR_APP
     )
 
-# ==================== BUSCADOR ====================
+# ==================== BUSCADOR SIMPLE ====================
 
 @app.route("/buscador")
 def buscador():
@@ -79,89 +80,74 @@ def buscador():
 @app.route("/buscar-elastic", methods=["POST"])
 def buscar_elastic():
     """
-    Realiza búsqueda en ElasticSearch para el buscador principal.
-    - Si en el JSON viene "indice", se usa ese índice.
-    - Si no, se usa ELASTIC_INDEX_DEFAULT.
+    Buscador SIMPLE:
+    - texto  -> palabra clave
+    - anio   -> año (opcional)
+    - semana -> semana epidemiológica (opcional)
     """
     try:
         data = request.get_json() or {}
 
-        texto_buscar = (data.get("texto") or "").strip()
-        if not texto_buscar:
-            return jsonify({"success": False, "error": "Texto requerido"}), 400
+        texto  = (data.get("texto")  or "").strip()
+        anio   = (data.get("anio")   or "").strip()
+        semana = (data.get("semana") or "").strip()
 
-        # índice a usar (puede venir desde la UI)
-        indice = (data.get("indice") or "").strip() or ELASTIC_INDEX_DEFAULT
+        if not texto and not anio and not semana:
+            return jsonify({
+                "success": False,
+                "error": "Debes ingresar al menos una palabra clave, un año o una semana."
+            }), 400
 
-        anio_filtro   = data.get("anio")
-        semana_filtro = data.get("semana")
-        tipo_archivo  = data.get("tipo_archivo")
+        must_clauses = []
+        filter_clauses = []
 
-        # Query principal
-        query_base = {
-            "bool": {
-                "must": [
-                    {
-                        "multi_match": {
-                            "query": texto_buscar,
-                            "fields": [
-                                "tema_central^3",
-                                "temas_portada^2",
-                                "semana_epidemiologica",
-                                "rango_fechas",
-                                "expertos_tematicos",
-                                "publicacion_en_linea",
-                                "_all",
-                            ],
-                        }
-                    }
-                ],
-                "filter": [],
+        # Palabra clave: busca en los campos principales
+        if texto:
+            must_clauses.append({
+                "multi_match": {
+                    "query": texto,
+                    "fields": [
+                        "tema_central^3",
+                        "temas_portada^2",
+                        "expertos_tematicos",
+                        "publicacion_en_linea",
+                        "rango_fechas",
+                        "_all"
+                    ]
+                }
+            })
+
+        # Filtro por año
+        if anio:
+            try:
+                anio_int = int(anio)
+                filter_clauses.append({"term": {"anio": anio_int}})
+            except ValueError:
+                filter_clauses.append({"term": {"anio": anio}})
+
+        # Filtro por semana epidemiológica
+        if semana:
+            filter_clauses.append({"term": {"semana_epidemiologica": str(semana)}})
+
+        query = {
+            "query": {
+                "bool": {
+                    "must": must_clauses if must_clauses else [{"match_all": {}}],
+                    "filter": filter_clauses
+                }
             }
         }
 
-        # Filtros
-        if anio_filtro:
-            try:
-                anio_int = int(anio_filtro)
-                query_base["bool"]["filter"].append({"term": {"anio": anio_int}})
-            except ValueError:
-                pass
-
-        if semana_filtro:
-            try:
-                semana_int = int(semana_filtro)
-                query_base["bool"]["filter"].append(
-                    {"term": {"semana_epidemiologica": str(semana_int)}}
-                )
-            except ValueError:
-                pass
-
-        if tipo_archivo:
-            query_base["bool"]["filter"].append(
-                {"term": {"tipo_archivo.keyword": tipo_archivo}}
-            )
-
-        aggs = {
-            "boletines_por_anio": {
-                "terms": {"field": "anio", "size": 20}
-            },
-            "boletines_por_tema_portada": {
-                "terms": {"field": "temas_portada.keyword", "size": 20}
-            },
-        }
-
-        # Ejecutar búsqueda usando el índice elegido
         resultado = elastic.buscar(
-            index=indice,
-            query={"query": query_base},
-            aggs=aggs,
-            size=100,
+            index=ELASTIC_INDEX_DEFAULT,
+            query=query,
+            size=150
         )
 
         return jsonify(resultado)
 
     except Exception as e:
+        print("Error en /buscar-elastic:", e)
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ==================== LOGIN ====================
@@ -284,31 +270,10 @@ def gestor_elastic():
 def listar_indices_elastic():
     """
     Devuelve una lista de índices de ElasticSearch en el formato que
-    espera gestor_elastic.html:
-    [
-      {
-        "nombre": "index-boletin-semanal",
-        "total_documentos": 123,
-        "tamano": "1.2mb",
-        "salud": "green",
-        "estado": "open"
-      },
-      ...
-    ]
+    espera gestor_elastic.html.
     """
     try:
-        # Intentamos obtener el cliente interno del helper
-        client = (
-            getattr(elastic, "client", None)
-            or getattr(elastic, "es", None)
-            or getattr(elastic, "_client", None)
-        )
-        if client is None:
-            raise RuntimeError(
-                "No se encontró el cliente interno de ElasticSearch en el helper."
-            )
-
-        # Obtenemos información de todos los índices en formato JSON
+        client = elastic.client
         indices_raw = client.cat.indices(format="json")
 
         indices = []
@@ -316,10 +281,9 @@ def listar_indices_elastic():
             indices.append({
                 "nombre": idx.get("index"),
                 "total_documentos": int(idx.get("docs.count") or 0),
-                # tamaño: si no está store.size usamos pri.store.size como respaldo
                 "tamano": idx.get("store.size") or idx.get("pri.store.size") or "0b",
-                "salud": idx.get("health"),   # green / yellow / red
-                "estado": idx.get("status"),  # open / close
+                "salud": idx.get("health"),
+                "estado": idx.get("status"),
             })
 
         return jsonify(indices)
@@ -327,6 +291,112 @@ def listar_indices_elastic():
     except Exception as e:
         print("Error al listar índices de Elastic:", e)
         return jsonify({"error": str(e)}), 500
+
+# ---------- API: EJECUTAR QUERY (SEARCH) EN ELASTIC ----------
+
+@app.route("/ejecutar-query-elastic", methods=["POST"])
+def ejecutar_query_elastic():
+    """
+    Recibe un JSON en texto desde el frontend, lo parsea y llama a
+    elastic.ejecutar_query(), que ya tienes definido en Helpers/elastic.py
+    """
+    try:
+        data = request.get_json() or {}
+        query_text = data.get("query")
+
+        if not query_text:
+            return jsonify({
+                "success": False,
+                "error": "No se recibió el texto de la query"
+            }), 400
+
+        try:
+            query_json = json.loads(query_text)
+        except json.JSONDecodeError as e:
+            return jsonify({
+                "success": False,
+                "error": f"JSON inválido: {str(e)}"
+            }), 400
+
+        resultado = elastic.ejecutar_query(query_json)
+        return jsonify(resultado)
+
+    except Exception as e:
+        print("Error en /ejecutar-query-elastic:", e)
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ---------- API: EJECUTAR DML (index / update / delete) EN ELASTIC ----------
+
+@app.route("/ejecutar-dml-elastic", methods=["POST"])
+def ejecutar_dml_elastic():
+    """
+    Ejecuta operaciones DML sencillas sobre Elastic:
+    {
+      "operacion": "index" | "update" | "delete",
+      "index": "nombre_indice",
+      "id": "1",
+      "documento": { ... }
+    }
+    """
+    try:
+        data = request.get_json() or {}
+        comando_text = data.get("comando")
+
+        if not comando_text:
+            return jsonify({
+                "success": False,
+                "error": "No se recibió el comando DML"
+            }), 400
+
+        try:
+            comando = json.loads(comando_text)
+        except json.JSONDecodeError as e:
+            return jsonify({
+                "success": False,
+                "error": f"JSON inválido: {str(e)}"
+            }), 400
+
+        operacion = (comando.get("operacion") or "").lower()
+        index = comando.get("index") or ELASTIC_INDEX_DEFAULT
+        doc_id = comando.get("id")
+        documento = comando.get("documento") or comando.get("doc")
+
+        if operacion not in ("index", "update", "delete"):
+            return jsonify({
+                "success": False,
+                "error": "operacion debe ser 'index', 'update' o 'delete'"
+            }), 400
+
+        if operacion in ("index", "update") and not documento:
+            return jsonify({
+                "success": False,
+                "error": "Debe enviar 'documento' para index/update"
+            }), 400
+
+        client = elastic.client
+
+        if operacion == "index":
+            resp = client.index(index=index, id=doc_id, document=documento, refresh=True)
+        elif operacion == "update":
+            if not doc_id:
+                return jsonify({
+                    "success": False,
+                    "error": "Debe enviar 'id' para update"
+                }), 400
+            resp = client.update(index=index, id=doc_id, doc=documento, refresh=True)
+        else:  # delete
+            if not doc_id:
+                return jsonify({
+                    "success": False,
+                    "error": "Debe enviar 'id' para delete"
+                }), 400
+            resp = client.delete(index=index, id=doc_id, refresh=True)
+
+        return jsonify({"success": True, "data": resp})
+
+    except Exception as e:
+        print("Error en /ejecutar-dml-elastic:", e)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ==================== ELASTIC: CARGA DE DATOS ====================
 

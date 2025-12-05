@@ -1,173 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Buscador Elastic · BigData MPBM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-box {
+        background: rgba(15,23,42,0.80);
+        border-radius: 18px;
+        padding: 1.8rem;
+        box-shadow: 0 12px 35px rgba(0,0,0,0.45);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: #e2e8f0;
+    }
+    .result-table {
+        background: rgba(15,23,42,0.75);
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+        border: 1px solid rgba(255,255,255,0.15);
+        color: white;
+    }
+    table thead th {
+        background: #1e293b !important;
+        color: #fff !important;
+    }
+    .pdf-btn {
+        padding: .3rem .6rem;
+        font-size: .78rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="container mt-4">
+
+    <h2 class="text-center mb-4 fw-bold">Buscador de documentos</h2>
+
+    <!-- ===========================
+         CAJA DE BÚSQUEDA
+    ================================ -->
+    <div class="search-box mb-4">
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Texto a buscar</label>
+                <input id="txtTexto" type="text" class="form-control" placeholder="Ej: dengue, chikunguña, vacunación...">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Año</label>
+                <input id="txtAnio" type="number" min="2000" max="2100" class="form-control" placeholder="Ej: 2024">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Semana epidemiológica</label>
+                <input id="txtSemana" type="number" min="1" max="53" class="form-control" placeholder="Ej: 15">
+            </div>
+        </div>
+
+        <div class="text-end mt-3">
+            <button class="btn btn-primary" onclick="buscarElastic()">
+                <i class="bi bi-search"></i> Buscar
+            </button>
+        </div>
+    </div>
+
+    <!-- ===========================
+         RESULTADOS
+    ================================ -->
+    <div id="divResultados" style="display:none;">
+
+        <h4 class="mb-3">
+            Resultados (<span id="totalResultados">0</span>)
+        </h4>
+
+        <div class="result-table">
+            <div class="table-responsive">
+                <table class="table table-sm table-striped table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 90px;">Año</th>
+                            <th style="width: 90px;">Semana</th>
+                            <th>Tema central</th>
+                            <th>Publicación en línea</th>
+                            <th style="width: 80px;">PDF</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaResultados">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
+
 {% block extra_js %}
 <script>
-    // Guardamos los últimos hits para el modal
-    let ultimaBusqueda = [];
+    function buscarElastic() {
 
-    // ---------- BUSCAR ----------
-    function buscar(event) {
-        event.preventDefault();
+        const texto  = document.getElementById("txtTexto").value.trim();
+        const anio   = document.getElementById("txtAnio").value.trim();
+        const semana = document.getElementById("txtSemana").value.trim();
 
-        const texto   = document.getElementById("textoBuscar").value.trim();
-        const anio    = document.getElementById("anioFiltro").value.trim();
-        const semana  = document.getElementById("semanaFiltro").value.trim();
-        const tipo    = document.getElementById("tipoFiltro").value;
-
-        if (!texto) {
-            alert("Ingrese un texto para buscar.");
+        if (!texto && !anio && !semana) {
+            alert("Debe ingresar al menos un filtro");
             return;
         }
 
-        document.getElementById("divResultados").style.display = "none";
-        document.getElementById("divError").style.display = "none";
-        document.getElementById("div_cargando").style.display = "block";
+        const payload = {
+            texto: texto,
+            anio: anio,
+            semana: semana
+        };
 
         fetch("/buscar-elastic", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                texto: texto,
-                campo: "_all",
-                anio: anio || null,
-                semana: semana || null,
-                tipo_archivo: tipo || null
-            })
+            body: JSON.stringify(payload)
         })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            document.getElementById("div_cargando").style.display = "none";
+        .then(r => r.json())
+        .then(data => {
+            console.log("RESP:", data);
 
             if (!data.success) {
-                mostrarError(data.error || "Error desconocido.");
+                alert("Error: " + (data.error || "No se pudo procesar la búsqueda"));
                 return;
             }
 
-            mostrarResultados(data);
+            const tabla = document.getElementById("tablaResultados");
+            const divResultados = document.getElementById("divResultados");
+            const totalSpan = document.getElementById("totalResultados");
+
+            tabla.innerHTML = "";
+            divResultados.style.display = "block";
+            totalSpan.textContent = data.total || 0;
+
+            if (!data.hits || data.hits.length === 0) {
+                tabla.innerHTML =
+                    <tr><td colspan="5" class="text-center">No se encontraron resultados</td></tr>;
+                return;
+            }
+
+            data.hits.forEach(hit => {
+
+                const d = hit._source || {};
+
+                const anio    = d.anio || "-";
+                const semana  = d.semana_epidemiologica || "-";
+                const tema    = d.tema_central || "(Sin tema)";
+                const pub     = d.publicacion_en_linea || "(Sin enlace)";
+                const pdf     = d.pdf_url || null;
+
+                const fila = `
+                    <tr>
+                        <td>${anio}</td>
+                        <td>${semana}</td>
+                        <td>${tema}</td>
+                        <td>${pub}</td>
+                        <td class="text-center">
+                            ${pdf 
+                                ? <a href="${pdf}" target="_blank" class="btn btn-sm btn-primary pdf-btn">PDF</a>
+                                : <span class="text-muted">N/A</span>}
+                        </td>
+                    </tr>
+                `;
+
+                tabla.insertAdjacentHTML("beforeend", fila);
+            });
+
         })
-        .catch(function (err) {
+        .catch(err => {
             console.error(err);
-            document.getElementById("div_cargando").style.display = "none";
-            mostrarError("Error en la conexión.");
+            alert("Error al buscar en Elastic");
         });
-    }
-
-    // ---------- MOSTRAR RESULTADOS ----------
-    function mostrarResultados(data) {
-        document.getElementById("totalResultados").textContent = data.total || 0;
-
-        mostrarAggregations(data.aggs || {});
-        ultimaBusqueda = data.resultados || data.hits || [];
-        mostrarHits(ultimaBusqueda);
-
-        document.getElementById("divResultados").style.display = "block";
-    }
-
-    // ---------- AGGREGATIONS (opcional) ----------
-    function mostrarAggregations(aggs) {
-        const cont = document.getElementById("divAggregations");
-        cont.innerHTML = "";
-
-        if (!aggs || Object.keys(aggs).length === 0) {
-            cont.innerHTML = "<p class='text-muted mb-0'>No hay facetas configuradas.</p>";
-            return;
-        }
-
-        Object.entries(aggs).forEach(function (entry) {
-            const nombre = entry[0];
-            const agg    = entry[1];
-
-            const div = document.createElement("div");
-            div.className = "aggs-item";
-            div.innerHTML =
-                "<h6>" + nombre + "</h6>" +
-                "<pre class='json-view mb-0'>" +
-                JSON.stringify(agg, null, 2) +
-                "</pre>";
-            cont.appendChild(div);
-        });
-    }
-
-    // ---------- TABLA DE HITS ----------
-    function mostrarHits(hits) {
-        const tabla = document.getElementById("tablaResultados");
-        tabla.innerHTML = "";
-
-        if (!hits || hits.length === 0) {
-            tabla.innerHTML =
-                "<tr><td colspan='5' class='text-center text-muted'>No se encontraron resultados.</td></tr>";
-            return;
-        }
-
-        hits.forEach(function (hit, i) {
-            const src = hit._source || {};
-
-            const semana = src.semana_epidemiologica || "N/D";
-            const rango  = src.rango_fechas || "N/D";
-            const tema   = src.tema_central || "Sin tema central";
-            const publi  = src.publicacion_en_linea || "";
-            const pdfUrl = src.pdf_url || "";
-
-            var temasPortadaTexto = "";
-            if (Array.isArray(src.temas_portada) && src.temas_portada.length > 0) {
-                temasPortadaTexto = src.temas_portada.join(" · ");
-            } else if (typeof src.temas_portada === "string" && src.temas_portada.trim() !== "") {
-                temasPortadaTexto = src.temas_portada;
-            }
-
-            var resumenHtml = "";
-            resumenHtml += "<strong>Semana epidemiológica:</strong> " + semana + "<br>";
-            resumenHtml += "<strong>Rango de fechas:</strong> " + rango + "<br>";
-            resumenHtml += "<strong>Tema central:</strong> " + tema;
-
-            if (temasPortadaTexto) {
-                resumenHtml += "<br><strong>Temas de portada:</strong> " + temasPortadaTexto;
-            }
-
-            if (publi) {
-                resumenHtml += "<br><strong>Publicación en línea:</strong> " + publi;
-            }
-
-            if (pdfUrl) {
-                resumenHtml += "<br><strong>PDF:</strong> " +
-                    "<a href='" + pdfUrl + "' target='_blank' rel='noopener noreferrer'>" +
-                    "Abrir boletín" +
-                    "</a>";
-            }
-
-            const row = document.createElement("tr");
-            row.innerHTML =
-                "<td>" + (i + 1) + "</td>" +
-                "<td><code class='small'>" + (hit._id || "") + "</code></td>" +
-                "<td>" + (hit._score ? hit._score.toFixed(4) : "N/A") + "</td>" +
-                "<td><small class='text-white-50'>" + (hit._index || "") + "</small></td>" +
-                "<td>" +
-                    "<div class='json-view mb-1'>" + resumenHtml + "</div>" +
-                    "<button class='btn btn-link btn-link-detalle text-info' " +
-                        "onclick='mostrarDetalle(" + i + ")' " +
-                        "data-bs-toggle='modal' data-bs-target='#modalDetalle'>" +
-                        "<i class='bi bi-arrows-angle-expand me-1'></i>Ver JSON completo" +
-                    "</button>" +
-                "</td>";
-
-            tabla.appendChild(row);
-        });
-    }
-
-    // ---------- ERROR ----------
-    function mostrarError(msg) {
-        document.getElementById("mensajeError").textContent = msg;
-        document.getElementById("divError").style.display = "block";
-    }
-
-    // ---------- MODAL DETALLE ----------
-    function mostrarDetalle(i) {
-        const hit = ultimaBusqueda[i];
-        if (!hit) return;
-
-        const modalBody = document.getElementById("modalDetalleBody");
-        modalBody.innerHTML =
-            "<pre class='json-view' style='max-height:520px;overflow-y:auto;'>" +
-            JSON.stringify(hit._source || {}, null, 2) +
-            "</pre>";
     }
 </script>
 {% endblock %}
