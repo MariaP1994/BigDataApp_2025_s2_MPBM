@@ -4,123 +4,196 @@
 
 {% block extra_css %}
 <style>
-    .search-card {
-        background: #ffffff;
-        border-radius: 14px;
-        padding: 2rem;
-        box-shadow: 0 8px 25px rgba(0,0,0,.20);
-        max-width: 900px;
-        margin: 0 auto;
-    }
-    .result-card {
-        background: #ffffff;
-        border-radius: 14px;
-        padding: 1.4rem;
-        box-shadow: 0 8px 25px rgba(0,0,0,.15);
-        max-width: 1100px;
-        margin: 3rem auto;
-    }
+  .search-card {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.12);
+    padding: 1.8rem 2rem;
+    margin-bottom: 2rem;
+    border: 1px solid #e2e8f0;
+  }
+  .results-card {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 12px 35px rgba(15, 23, 42, 0.12);
+    padding: 1.2rem 1.6rem;
+    border: 1px solid #e2e8f0;
+  }
+  .table thead th {
+    background-color: #0f172a;
+    color: #f9fafb;
+    font-weight: 600;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<h2 class="text-center mb-4 fw-bold">Buscador de documentos</h2>
+<div class="container my-4">
 
-<div class="search-card">
-    <form id="formBusqueda" onsubmit="buscarElastic(); return false;">
-        <div class="row mb-3">
-            <div class="col-md-6">
-                <label class="form-label">Texto a buscar</label>
-                <input id="texto" class="form-control" placeholder="Ej: comportamiento">
-            </div>
+  <h1 class="text-center mb-4">Buscador de documentos</h1>
 
-            <div class="col-md-3">
-                <label class="form-label">Año</label>
-                <input id="anio" class="form-control" placeholder="Ej: 2019">
-            </div>
+  <!-- FORMULARIO DE BÚSQUEDA -->
+  <div class="search-card">
+    <form id="form-buscador" class="row g-3">
+      <div class="col-md-6">
+        <label for="texto" class="form-label">Texto a buscar</label>
+        <input type="text"
+               class="form-control"
+               id="texto"
+               placeholder="Ej: comportamiento, vigilancia, mortalidad">
+      </div>
 
-            <div class="col-md-3">
-                <label class="form-label">Semana epidemiológica</label>
-                <input id="semana" class="form-control" placeholder="Ej: 29">
-            </div>
-        </div>
+      <div class="col-md-3">
+        <label for="anio" class="form-label">Año</label>
+        <input type="number"
+               class="form-control"
+               id="anio"
+               placeholder="Ej: 2020">
+      </div>
 
-        <button class="btn btn-primary">
-            <i class="bi bi-search"></i> Buscar
+      <div class="col-md-3">
+        <label for="semana" class="form-label">Semana epidemiológica</label>
+        <input type="number"
+               class="form-control"
+               id="semana"
+               placeholder="Ej: 29">
+      </div>
+
+      <div class="col-md-3">
+        <label for="tipo_archivo" class="form-label">Tipo de archivo</label>
+        <select id="tipo_archivo" class="form-select">
+          <option value="">Todos</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </div>
+
+      <div class="col-12 d-flex justify-content-end">
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-search"></i> Buscar
         </button>
+      </div>
     </form>
-</div>
+  </div>
 
-<div id="divResultados" class="result-card" style="display:none;">
-    <h5 class="mb-3">Resultados de la búsqueda (<span id="totalResultados">0</span>)</span></h5>
+  <!-- RESULTADOS -->
+  <div class="results-card">
+    <h5 class="mb-3">
+      Resultados de la búsqueda:
+      <span class="badge bg-secondary" id="total-resultados">0</span>
+    </h5>
 
     <div class="table-responsive">
-        <table class="table table-striped table-bordered align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>Año</th>
-                    <th>Semana</th>
-                    <th>Tema central</th>
-                    <th>Rango de fechas</th>
-                    <th>Publicación en línea</th>
-                    <th>PDF</th>
-                </tr>
-            </thead>
-            <tbody id="tablaResultados"></tbody>
-        </table>
+      <table class="table table-striped table-hover align-middle">
+        <thead>
+          <tr>
+            <th>Semana</th>
+            <th>Rango de fechas</th>
+            <th>Tema central</th>
+            <th>Temas de portada</th>
+            <th>Año</th>
+            <th class="text-center">PDF</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-resultados">
+          <tr>
+            <td colspan="6" class="text-center text-muted">
+              Usa el formulario de arriba para realizar una búsqueda.
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+  </div>
+
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-async function buscarElastic() {
-    const texto  = document.getElementById("texto").value;
-    const anio   = document.getElementById("anio").value;
-    const semana = document.getElementById("semana").value;
+  // Manejar envío del formulario
+  const form = document.getElementById("form-buscador");
+  const tbody = document.getElementById("tbody-resultados");
+  const totalSpan = document.getElementById("total-resultados");
 
-    const resp = await fetch("/buscar-elastic", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({texto, anio, semana})
-    });
+  form.addEventListener("submit", async function (evt) {
+    evt.preventDefault();
 
-    const data = await resp.json();
-    console.log("RESPUESTA /buscar-elastic:", data);
+    const texto = document.getElementById("texto").value.trim();
+    const anio = document.getElementById("anio").value.trim();
+    const semana = document.getElementById("semana").value.trim();
+    const tipoArchivo = document.getElementById("tipo_archivo").value.trim();
 
-    const divResultados = document.getElementById("divResultados");
-    const totalSpan     = document.getElementById("totalResultados");
-    const tbody         = document.getElementById("tablaResultados");
-
-    tbody.innerHTML = "";
-    divResultados.style.display = "block";
-
-    if (!data.success || !data.hits || data.hits.length === 0) {
-        totalSpan.textContent = "0";
-        tbody.innerHTML = <tr><td colspan="6" class="text-center text-muted">Sin resultados</td></tr>;
-        return;
+    if (!texto) {
+      alert("Por favor ingresa algún texto para buscar.");
+      return;
     }
 
-    totalSpan.textContent = data.total || data.hits.length;
+    const payload = {
+      texto: texto,
+      anio: anio || null,
+      semana: semana || null,
+      tipo_archivo: tipoArchivo || null
+    };
 
-    data.hits.forEach(hit => {
-        const d = hit._source || {};
+    try {
+      const resp = await fetch("{{ url_for('buscar_elastic') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-        const fila = `
-            <tr>
-                <td>${d.anio ?? ""}</td>
-                <td>${d.semana_epidemiologica ?? ""}</td>
-                <td>${d.tema_central ?? ""}</td>
-                <td>${d.rango_fechas ?? ""}</td>
-                <td>${d.publicacion_en_linea ? <a href="${d.publicacion_en_linea}" target="_blank">Ver</a> : ""}</td>
-                <td>${d.pdf_url ? <a href="${d.pdf_url}" target="_blank" class="btn btn-sm btn-primary">PDF</a> : "N/A"}</td>
-            </tr>
+      const data = await resp.json();
+
+      if (!data.success) {
+        alert("Error al buscar: " + (data.error || "Error desconocido"));
+        console.error("Respuesta error:", data);
+        return;
+      }
+
+      totalSpan.textContent = data.total || 0;
+      tbody.innerHTML = "";
+
+      if (!data.hits || data.hits.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="text-center text-muted">
+              No se encontraron resultados para esa búsqueda.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      data.hits.forEach(hit => {
+        const doc = hit._source || {};
+        const temasPortada = Array.isArray(doc.temas_portada)
+          ? doc.temas_portada.join(", ")
+          : (doc.temas_portada || "");
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${doc.semana_epidemiologica || ""}</td>
+          <td>${doc.rango_fechas || ""}</td>
+          <td>${doc.tema_central || ""}</td>
+          <td>${temasPortada}</td>
+          <td>${doc.anio || ""}</td>
+          <td class="text-center">
+            ${
+              doc.pdf_url
+                ? `<a href="${doc.pdf_url}" target="_blank"
+                     class="btn btn-sm btn-outline-primary">Ver PDF</a>`
+                : ""
+            }
+          </td>
         `;
+        tbody.appendChild(tr);
+      });
 
-        tbody.insertAdjacentHTML("beforeend", fila);
-    });
-}
+    } catch (err) {
+      console.error("Error en fetch /buscar-elastic:", err);
+      alert("Error de comunicación con el servidor.");
+    }
+  });
 </script>
 {% endblock %}

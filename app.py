@@ -1,295 +1,169 @@
-# -- coding: utf-8 --
-from flask import (
-    Flask, render_template, request, redirect,
-    url_for, jsonify, session, flash
-)
-from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
+from elasticsearch import Elasticsearch
+from datetime import timedelta
 import os
 
-# ====== IMPORTS DE NUESTROS MÓDULOS ======
-from Helpers.mongoDB import MongoDB
-from Helpers.elastic import ElasticSearch
-from Helpers.funciones import Funciones
-from Helpers.webScraping import WebScraping
-
-# ================= CARGAR VARIABLES DE ENTORNO =================
-load_dotenv("env.txt")
+from dotenv import load_dotenv
+load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = "tu_clave_secreta"
+app.permanent_session_lifetime = timedelta(hours=5)
 
-# --------- VARIABLES DE CONFIGURACIÓN ---------
-MONGO_URI       = os.getenv("MONGO_URI")
-MONGO_DB        = os.getenv("MONGO_DB") or "proyecto_bigdata"
-MONGO_COLECCION = os.getenv("MONGO_COLECCION") or "usuario_roles"
+# ========================
+# CONFIGURACIÓN ELASTIC
+# ========================
+ELASTIC_ENDPOINT = os.getenv("ELASTIC_ENDPOINT")
+ELASTIC_API_KEY = os.getenv("ELASTIC_API_KEY")
+ELASTIC_INDEX = "index-boletin-semanal"
 
-ELASTIC_CLOUD_URL     = os.getenv("ELASTIC_CLOUD_URL")
-ELASTIC_API_KEY       = os.getenv("ELASTIC_API_KEY")
-ELASTIC_INDEX_DEFAULT = os.getenv("ELASTIC_INDEX_DEFAULT") or "index-boletin-semanal"
+if not ELASTIC_ENDPOINT:
+    raise RuntimeError("ELASTIC_ENDPOINT no está configurada (revisa tu .env)")
+if not ELASTIC_API_KEY:
+    raise RuntimeError("ELASTIC_API_KEY no está configurada (revisa tu .env)")
 
-app.secret_key = os.getenv("SECRET_KEY") or "Mpbm1234"
-
-VERSION_APP = "1.2.0"
-CREATOR_APP = "María Paula Barrero"
-
-# --------- DEBUG RÁPIDO ---------
-print("DEBUG MONGO_URI:", repr(MONGO_URI))
-print("DEBUG MONGO_DB:", repr(MONGO_DB))
-print("DEBUG MONGO_COLECCION:", repr(MONGO_COLECCION))
-print("DEBUG ELASTIC_CLOUD_URL:", repr(ELASTIC_CLOUD_URL))
-print("DEBUG ELASTIC_INDEX_DEFAULT:", repr(ELASTIC_INDEX_DEFAULT))
-
-# ================= INICIALIZAR CONEXIONES =================
-mongo = MongoDB(MONGO_URI, MONGO_DB)
-elastic = ElasticSearch(
-    cloud_url=ELASTIC_CLOUD_URL,
+# Cliente de Elasticsearch usando ENDPOINT (no cloud_id)
+es = Elasticsearch(
+    hosts=[ELASTIC_ENDPOINT],
     api_key=ELASTIC_API_KEY,
-    default_index=ELASTIC_INDEX_DEFAULT,
 )
 
-# ==================== RUTAS PÚBLICAS ====================
+
+# ========================
+# RUTAS BÁSICAS
+# ========================
 
 @app.route("/")
-def landing():
-    return render_template(
-        "landing.html",
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
+def index():
+    return render_template("landing.html")
 
-@app.route("/about")
-def about():
-    # úsala solo si tienes about.html
-    return render_template(
-        "about.html",
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
-# ==================== BUSCADOR (VISTA) ====================
-
-@app.route("/buscador")
-def buscador():
-    return render_template(
-        "buscador.html",
-        version=VERSION_APP,
-        creador=CREATOR_APP
-    )
-
-# ==================== BUSCADOR (API ELASTIC) ====================
-
-@app.route("/buscar-elastic", methods=["POST"])
-def buscar_elastic():
-    try:
-        data = request.get_json()
-
-        texto = (data.get("texto") or "").strip()
-        anio = data.get("anio")
-        semana = data.get("semana")
-
-        if not texto:
-            return jsonify({"success": False, "error": "Debe ingresar un texto"}), 400
-
-        # -------------------------------
-        #  QUERY ADAPTADA A TU JSON REAL
-        # -------------------------------
-        query_body = {
-            "query": {
-                "bool": {
-                    "must": [
-                        {
-                            "multi_match": {
-                                "query": texto,
-                                "fields": [
-                                    "tema_central^3",
-                                    "temas_portada^2",
-                                    "rango_fechas",
-                                    "publicacion_en_linea",
-                                    "_all"
-                                ]
-                            }
-                        }
-                    ],
-                    "filter": []
-                }
-            }
-        }
-
-        # FILTRO POR AÑO
-        if anio:
-            try:
-                query_body["query"]["bool"]["filter"].append({"term": {"anio": int(anio)}})
-            except:
-                pass
-
-        # FILTRO POR SEMANA
-        if semana:
-            query_body["query"]["bool"]["filter"].append(
-                {"term": {"semana_epidemiologica": semana}}
-            )
-
-        # EJECUTAR BÚSQUEDA
-        resultado = elastic.buscar(
-            index="index-boletin-semanal",
-            query=query_body,
-            size=200
-        )
-
-        return jsonify(resultado)
-
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-# ==================== LOGIN ====================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    error_message = None
-
     if request.method == "POST":
-        usuario = request.form.get("usuario", "").strip()
-        password = request.form.get("password", "").strip()
+        usuario = request.form.get("usuario")
+        password = request.form.get("password")
 
-        # PLAN B – Login fijo
-        if usuario == "administrador" and password == "Admin1234":
+        # Lógica sencilla solo para pruebas
+        if usuario == "admin" and password == "123":
             session["usuario"] = usuario
-            session["permisos"] = {
-                "admin_usuarios": True,
-                "admin_elastic": True,
-                "admin_data_elastic": True,
-            }
-            session["logged_in"] = True
-            flash("Inicio exitoso", "success")
-            return redirect(url_for("admin"))
+            return redirect(url_for("buscador"))
 
-        # PLAN A – Login desde Mongo
-        user_data = mongo.validar_usuario(usuario, password, MONGO_COLECCION)
+        return render_template("login.html", error_message="Credenciales inválidas")
 
-        if user_data:
-            session["usuario"] = usuario
-            session["permisos"] = user_data.get("permisos", {})
-            session["logged_in"] = True
-            flash("Inicio exitoso", "success")
-            return redirect(url_for("admin"))
-        else:
-            error_message = "Usuario o contraseña incorrectos"
+    return render_template("login.html")
 
-    return render_template(
-        "login.html",
-        version=VERSION_APP,
-        creador=CREATOR_APP,
-        error_message=error_message
-    )
 
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("Sesión cerrada", "info")
-    return redirect(url_for("landing"))
+    return redirect(url_for("login"))
 
-# ==================== ADMIN ====================
 
-@app.route("/admin")
-def admin():
-    if not session.get("logged_in"):
-        flash("Inicia sesión", "warning")
-        return redirect(url_for("login"))
+# ========================
+# BUSCADOR
+# ========================
 
-    return render_template(
-        "admin.html",
-        usuario=session.get("usuario"),
-        permisos=session.get("permisos"),
-        version=VERSION_APP,
-        creador=CREATOR_APP,
-    )
+@app.route("/buscador")
+def buscador():
+    # if "usuario" not in session:
+    #     return redirect(url_for("login"))
+    return render_template("buscador.html")
 
-# ==================== USUARIOS ====================
 
-@app.route("/listar-usuarios")
-def listar_usuarios():
+@app.route("/buscar-elastic", methods=["POST"])
+def buscar_elastic():
     try:
-        usuarios = mongo.listar_usuarios(MONGO_COLECCION)
-        for u in usuarios:
-            u["_id"] = str(u["_id"])
-        return jsonify(usuarios)
+        data = request.json or {}
+
+        texto = (data.get("texto") or "").trim() if hasattr(str, "trim") else (data.get("texto") or "").strip()
+        # la línea de arriba es por seguridad, pero realmente .strip() basta:
+        texto = (data.get("texto") or "").strip()
+
+        anio_filtro = data.get("anio")
+        semana_filtro = data.get("semana")
+        tipo_archivo = data.get("tipo_archivo")
+
+        if not texto:
+            return jsonify({"success": False, "error": "Texto vacío"})
+
+        # --------------------------
+        # QUERY BASE
+        # --------------------------
+        query_base = {
+            "bool": {
+                "must": [
+                    {
+                        "multi_match": {
+                            "query": texto,
+                            "fields": [
+                                "tema_central",
+                                "temas_portada",
+                                "rango_fechas",
+                                "publicacion_en_linea",
+                                "semana_epidemiologica"
+                                # OJO: quitamos "anio" porque es numérico
+                            ],
+                            "type": "best_fields"
+                        }
+                    }
+                ],
+                "filter": []
+            }
+        }
+
+        # Filtro por año (numérico)
+        if anio_filtro:
+            try:
+                anio_int = int(anio_filtro)
+                query_base["bool"]["filter"].append(
+                    {"term": {"anio": anio_int}}
+                )
+            except ValueError:
+                pass
+
+        # Filtro por semana (dos dígitos)
+        if semana_filtro:
+            try:
+                semana_int = int(semana_filtro)
+                semana_str = f"{semana_int:02d}"   # 1 -> "01"
+                query_base["bool"]["filter"].append(
+                    {"term": {"semana_epidemiologica": semana_str}}
+                )
+            except ValueError:
+                pass
+
+        # Filtro por tipo de archivo
+        if tipo_archivo:
+            query_base["bool"]["filter"].append(
+                {"term": {"tipo_archivo": tipo_archivo}}
+            )
+
+        # --------------------------
+        # EJECUTAR QUERY EN ELASTIC
+        # --------------------------
+        resultado = es.search(
+            index=ELASTIC_INDEX,
+            size=150,
+            query=query_base
+        )
+
+        total = resultado["hits"]["total"]["value"]
+        hits = resultado["hits"]["hits"]
+
+        return jsonify({
+            "success": True,
+            "total": total,
+            "hits": hits
+        })
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print("Error en /buscar-elastic:", e)
+        return jsonify({"success": False, "error": str(e)})
 
-@app.route("/gestor_usuarios")
-def gestor_usuarios():
-    if not session.get("logged_in"):
-        flash("Inicia sesión", "warning")
-        return redirect(url_for("login"))
 
-    permisos = session.get("permisos", {})
-    if not permisos.get("admin_usuarios"):
-        flash("No tiene permisos", "danger")
-        return redirect(url_for("admin"))
-
-    return render_template(
-        "gestor_usuarios.html",
-        usuario=session.get("usuario"),
-        permisos=permisos,
-        version=VERSION_APP,
-        creador=CREATOR_APP,
-    )
-
-# ==================== ELASTIC: GESTOR ====================
-
-@app.route("/gestor_elastic")
-def gestor_elastic():
-    if not session.get("logged_in"):
-        flash("Inicia sesión", "warning")
-        return redirect(url_for("login"))
-
-    permisos = session.get("permisos", {})
-    if not permisos.get("admin_elastic"):
-        flash("No tiene permisos", "danger")
-        return redirect(url_for("admin"))
-
-    return render_template(
-        "gestor_elastic.html",
-        usuario=session.get("usuario"),
-        permisos=permisos,
-        version=VERSION_APP,
-        creador=CREATOR_APP,
-    )
-
-# ==================== ELASTIC: CARGA DE DATOS ====================
-
-@app.route("/cargar_doc_elastic")
-def cargar_doc_elastic():
-    if not session.get("logged_in"):
-        flash("Inicia sesión", "warning")
-        return redirect(url_for("login"))
-
-    permisos = session.get("permisos", {})
-    if not permisos.get("admin_data_elastic"):
-        flash("No tiene permisos", "danger")
-        return redirect(url_for("admin"))
-
-    return render_template(
-        "documentos_elastic.html",
-        usuario=session.get("usuario"),
-        permisos=permisos,
-        version=VERSION_APP,
-        creador=CREATOR_APP,
-    )
-
-# ==================== MAIN ====================
-
+# ========================
+# EJECUCIÓN LOCAL
+# ========================
 if __name__ == "__main__":
-    Funciones.crear_carpeta("static/uploads")
-
-    print("\n===============================")
-    print("VERIFICANDO CONEXIONES")
-
-    if mongo.test_connection():
-        print("MongoDB Atlas OK")
-    else:
-        print("Error MongoDB")
-
-    if elastic.test_connection():
-        print("ElasticSearch Cloud OK")
-    else:
-        print("Error ElasticSearch")
-
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True)
