@@ -78,17 +78,24 @@ def buscador():
 
 @app.route("/buscar-elastic", methods=["POST"])
 def buscar_elastic():
-    """Realiza búsqueda en ElasticSearch."""
+    """
+    Realiza búsqueda en ElasticSearch para el buscador principal.
+    - Si en el JSON viene "indice", se usa ese índice.
+    - Si no, se usa ELASTIC_INDEX_DEFAULT.
+    """
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
+
         texto_buscar = (data.get("texto") or "").strip()
+        if not texto_buscar:
+            return jsonify({"success": False, "error": "Texto requerido"}), 400
+
+        # índice a usar (puede venir desde la UI)
+        indice = (data.get("indice") or "").strip() or ELASTIC_INDEX_DEFAULT
 
         anio_filtro   = data.get("anio")
         semana_filtro = data.get("semana")
         tipo_archivo  = data.get("tipo_archivo")
-
-        if not texto_buscar:
-            return jsonify({"success": False, "error": "Texto requerido"}), 400
 
         # Query principal
         query_base = {
@@ -144,8 +151,9 @@ def buscar_elastic():
             },
         }
 
+        # Ejecutar búsqueda usando el índice elegido
         resultado = elastic.buscar(
-            index=ELASTIC_INDEX_DEFAULT,
+            index=indice,
             query={"query": query_base},
             aggs=aggs,
             size=100,
@@ -269,6 +277,56 @@ def gestor_elastic():
         version=VERSION_APP,
         creador=CREATOR_APP,
     )
+
+# ---------- API: LISTAR ÍNDICES DE ELASTIC (para gestor_elastic) ----------
+
+@app.route("/listar-indices-elastic")
+def listar_indices_elastic():
+    """
+    Devuelve una lista de índices de ElasticSearch en el formato que
+    espera gestor_elastic.html:
+    [
+      {
+        "nombre": "index-boletin-semanal",
+        "total_documentos": 123,
+        "tamano": "1.2mb",
+        "salud": "green",
+        "estado": "open"
+      },
+      ...
+    ]
+    """
+    try:
+        # Intentamos obtener el cliente interno del helper
+        client = (
+            getattr(elastic, "client", None)
+            or getattr(elastic, "es", None)
+            or getattr(elastic, "_client", None)
+        )
+        if client is None:
+            raise RuntimeError(
+                "No se encontró el cliente interno de ElasticSearch en el helper."
+            )
+
+        # Obtenemos información de todos los índices en formato JSON
+        indices_raw = client.cat.indices(format="json")
+
+        indices = []
+        for idx in indices_raw:
+            indices.append({
+                "nombre": idx.get("index"),
+                "total_documentos": int(idx.get("docs.count") or 0),
+                # tamaño: si no está store.size usamos pri.store.size como respaldo
+                "tamano": idx.get("store.size") or idx.get("pri.store.size") or "0b",
+                "salud": idx.get("health"),   # green / yellow / red
+                "estado": idx.get("status"),  # open / close
+            })
+
+        return jsonify(indices)
+
+    except Exception as e:
+        print("Error al listar índices de Elastic:", e)
+        return jsonify({"error": str(e)}), 500
 
 # ==================== ELASTIC: CARGA DE DATOS ====================
 
