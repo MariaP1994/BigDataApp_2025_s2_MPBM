@@ -1,110 +1,70 @@
 {% extends "base.html" %}
 
-{% block title %}Panel de Administración - BigData-MiProyecto{% endblock %}
+{% block title %}Panel · BigData MPBM{% endblock %}
 
 {% block extra_css %}
 <style>
-    .admin-card {
-        background: rgba(15, 23, 42, 0.95);
-        border-radius: 18px;
-        padding: 24px 24px 20px;
-        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
-        border: 1px solid rgba(148, 163, 184, 0.35);
-        color: #e5e7eb;
-        height: 100%;
-    }
-    .admin-card h3 {
-        font-size: 1.2rem;
-        font-weight: 700;
-        margin-bottom: .5rem;
-    }
-    .admin-card p {
-        font-size: .9rem;
-        color: #9ca3af;
-    }
+  .admin-hero {
+    background: linear-gradient(135deg, #047857, #10b981);
+    border-radius: 20px;
+    padding: 2rem 2.5rem;
+    color: #f9fafb;
+    box-shadow: 0 18px 40px rgba(0,0,0,.45);
+    margin-top: 1.5rem;
+  }
+  .admin-hero-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: .3rem;
+  }
+  .admin-hero-sub {
+    font-size: .95rem;
+    opacity: .9;
+  }
+  .search-card {
+    margin-top: 1.5rem;
+    background: #f9fafb;
+    border-radius: 18px;
+    padding: 1.5rem 1.8rem;
+    box-shadow: 0 12px 30px rgba(0,0,0,.15);
+    border: 1px solid #e5e7eb;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div class="mb-4">
-    <h1 class="text-white mb-1">Panel de Administración</h1>
-    <p class="text-white-50 mb-0">
-        Bienvenida, <strong>{{ usuario }}</strong>. Desde aquí puedes gestionar usuarios,
-        administrar ElasticSearch y cargar datos, según tus permisos.
-    </p>
-</div>
+<div class="container">
 
-<div class="row g-4">
-
-    <!-- Gestión de usuarios -->
-    <div class="col-md-4">
-        <div class="admin-card">
-            <h3>Gestión de usuarios</h3>
-            <p>Crear, actualizar o eliminar cuentas de acceso y asignar permisos.</p>
-
-            {% if permisos and permisos.get("admin_usuarios") %}
-                <span class="badge bg-success mb-2">Permiso: admin_usuarios</span>
-                <p class="small text-white-50">
-                    Puedes administrar los usuarios registrados en MongoDB.
-                </p>
-                <a href="{{ url_for('gestor_usuarios') }}" class="btn btn-primary btn-sm">
-                    Ir al gestor de usuarios
-                </a>
-            {% else %}
-                <span class="badge bg-warning text-dark mb-2">Sin permiso</span>
-                <p class="small text-warning">
-                    No tienes permiso <code>admin_usuarios</code>.
-                </p>
-            {% endif %}
-        </div>
+  <div class="admin-hero d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <div class="admin-hero-title">BigData-MiProyecto</div>
+      <p class="admin-hero-sub mb-0">
+        Bienvenido(a) {{ usuario }} · Panel principal del proyecto BigData MPBM.
+      </p>
     </div>
-
-    <!-- Administración ElasticSearch -->
-    <div class="col-md-4">
-        <div class="admin-card">
-            <h3>Administrar ElasticSearch</h3>
-            <p>Consultar índices de Elastic y ejecutar queries o comandos.</p>
-
-            {% if permisos and permisos.get("admin_elastic") %}
-                <span class="badge bg-success mb-2">Permiso: admin_elastic</span>
-                <p class="small text-white-50">
-                    Puedes revisar índices, ejecutar consultas y ver resultados.
-                </p>
-                <a href="{{ url_for('gestor_elastic') }}" class="btn btn-primary btn-sm">
-                    Ir al gestor de ElasticSearch
-                </a>
-            {% else %}
-                <span class="badge bg-warning text-dark mb-2">Sin permiso</span>
-                <p class="small text-warning">
-                    No tienes permiso <code>admin_elastic</code>.
-                </p>
-            {% endif %}
-        </div>
+    <div class="text-md-end">
+      <p class="mb-0">Versión {{ version }}</p>
+      <p class="mb-0">Creado por {{ creador }}</p>
     </div>
+  </div>
 
-    <!-- Carga de datos a Elastic -->
-    <div class="col-md-4">
-        <div class="admin-card">
-            <h3>Carga de archivos a Elastic</h3>
-            <p>Subir archivos JSON (ZIP) o PDFs procesados para indexarlos.</p>
-
-            {% if permisos and permisos.get("admin_data_elastic") %}
-                <span class="badge bg-success mb-2">Permiso: admin_data_elastic</span>
-                <p class="small text-white-50">
-                    Puedes cargar datos al índice seleccionado en ElasticSearch.
-                </p>
-                <a href="{{ url_for('cargar_doc_elastic') }}" class="btn btn-primary btn-sm">
-                    Ir al cargador de datos
-                </a>
-            {% else %}
-                <span class="badge bg-warning text-dark mb-2">Sin permiso</span>
-                <p class="small text-warning">
-                    No tienes permiso <code>admin_data_elastic</code>.
-                </p>
-            {% endif %}
-        </div>
+  <!-- ÚNICO PANEL: BUSCADOR -->
+  <div class="search-card mt-4">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+      <div>
+        <h4 class="mb-1">Buscador de documentos</h4>
+        <p class="mb-0 text-muted">
+          Realiza búsquedas por palabra clave, año o semana epidemiológica y accede directamente a los boletines en PDF.
+        </p>
+      </div>
+      <div class="text-md-end">
+        <a href="{{ url_for('buscador') }}" class="btn btn-primary btn-lg">
+          <i class="bi bi-search me-1"></i> Ir al buscador
+        </a>
+      </div>
     </div>
+  </div>
 
 </div>
 

@@ -1,99 +1,98 @@
 {% extends "base.html" %}
 
-{% block title %}Buscador Elastic · BigData MPBM{% endblock %}
+{% block title %}Buscador de documentos · BigData MPBM{% endblock %}
 
 {% block extra_css %}
 <style>
-    .search-box {
-        background: rgba(15,23,42,0.80);
-        border-radius: 18px;
-        padding: 1.8rem;
-        box-shadow: 0 12px 35px rgba(0,0,0,0.45);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: #e2e8f0;
-    }
-    .result-table {
-        background: rgba(15,23,42,0.75);
-        border-radius: 12px;
-        padding: 1rem;
-        box-shadow: 0 10px 28px rgba(0,0,0,0.45);
-        border: 1px solid rgba(255,255,255,0.15);
-        color: white;
-    }
-    table thead th {
-        background: #1e293b !important;
-        color: #fff !important;
-    }
-    .pdf-btn {
-        padding: .3rem .6rem;
-        font-size: .78rem;
-    }
+  .buscador-wrap {
+    margin-top: 1.5rem;
+  }
+  .buscador-card {
+    background: #f9fafb;
+    border-radius: 18px;
+    padding: 1.8rem 1.8rem 1.4rem 1.8rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 12px 30px rgba(0,0,0,.15);
+  }
+  .result-card {
+    margin-top: 1.8rem;
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 1.2rem 1.5rem;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 10px 26px rgba(0,0,0,.12);
+  }
+  table thead th {
+    background: #111827;
+    color: #f9fafb;
+  }
+  .pdf-btn {
+    padding: .25rem .6rem;
+    font-size: .78rem;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div class="container mt-4">
+<div class="container buscador-wrap">
 
-    <h2 class="text-center mb-4 fw-bold">Buscador de documentos</h2>
+  <h2 class="text-center mb-4 fw-bold">Buscador de documentos</h2>
 
-    <!-- ===========================
-         CAJA DE BÚSQUEDA
-    ================================ -->
-    <div class="search-box mb-4">
-
-        <div class="row g-3">
-            <div class="col-md-6">
-                <label class="form-label">Texto a buscar</label>
-                <input id="txtTexto" type="text" class="form-control" placeholder="Ej: dengue, chikunguña, vacunación...">
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Año</label>
-                <input id="txtAnio" type="number" min="2000" max="2100" class="form-control" placeholder="Ej: 2024">
-            </div>
-
-            <div class="col-md-3">
-                <label class="form-label">Semana epidemiológica</label>
-                <input id="txtSemana" type="number" min="1" max="53" class="form-control" placeholder="Ej: 15">
-            </div>
-        </div>
-
-        <div class="text-end mt-3">
-            <button class="btn btn-primary" onclick="buscarElastic()">
-                <i class="bi bi-search"></i> Buscar
-            </button>
-        </div>
+  <!-- FILTROS -->
+  <div class="buscador-card">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">Texto a buscar</label>
+        <input id="txtTexto" type="text" class="form-control"
+               placeholder="Ej: dengue, mortalidad, brotes...">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Año</label>
+        <input id="txtAnio" type="number" min="2000" max="2100"
+               class="form-control" placeholder="Ej: 2019">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">Semana epidemiológica</label>
+        <input id="txtSemana" type="number" min="1" max="53"
+               class="form-control" placeholder="Ej: 29">
+      </div>
     </div>
 
-    <!-- ===========================
-         RESULTADOS
-    ================================ -->
-    <div id="divResultados" style="display:none;">
-
-        <h4 class="mb-3">
-            Resultados (<span id="totalResultados">0</span>)
-        </h4>
-
-        <div class="result-table">
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-bordered align-middle">
-                    <thead>
-                        <tr>
-                            <th style="width: 90px;">Año</th>
-                            <th style="width: 90px;">Semana</th>
-                            <th>Tema central</th>
-                            <th>Publicación en línea</th>
-                            <th style="width: 80px;">PDF</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tablaResultados">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
+    <div class="text-end mt-3">
+      <button class="btn btn-primary" onclick="buscarElastic()">
+        <i class="bi bi-search"></i> Buscar
+      </button>
     </div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div id="divResultados" class="result-card" style="display:none;">
+
+    <h5 class="mb-3">
+      Resultados de la búsqueda (<span id="totalResultados">0</span>)
+    </h5>
+
+    <div class="table-responsive">
+      <table class="table table-sm table-striped table-bordered align-middle">
+        <thead>
+          <tr>
+            <th>Año</th>
+            <th>Semana</th>
+            <th>Rango de fechas</th>
+            <th>Tema central</th>
+            <th>Publicación en línea</th>
+            <th>Temas de portada</th>
+            <th>PDF</th>
+          </tr>
+        </thead>
+        <tbody id="tablaResultados">
+          <!-- filas dinámicas -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
 
 </div>
 
@@ -101,83 +100,79 @@
 
 {% block extra_js %}
 <script>
-    function buscarElastic() {
+  function buscarElastic() {
+    const texto  = document.getElementById("txtTexto").value.trim();
+    const anio   = document.getElementById("txtAnio").value.trim();
+    const semana = document.getElementById("txtSemana").value.trim();
 
-        const texto  = document.getElementById("txtTexto").value.trim();
-        const anio   = document.getElementById("txtAnio").value.trim();
-        const semana = document.getElementById("txtSemana").value.trim();
-
-        if (!texto && !anio && !semana) {
-            alert("Debe ingresar al menos un filtro");
-            return;
-        }
-
-        const payload = {
-            texto: texto,
-            anio: anio,
-            semana: semana
-        };
-
-        fetch("/buscar-elastic", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        })
-        .then(r => r.json())
-        .then(data => {
-            console.log("RESP:", data);
-
-            if (!data.success) {
-                alert("Error: " + (data.error || "No se pudo procesar la búsqueda"));
-                return;
-            }
-
-            const tabla = document.getElementById("tablaResultados");
-            const divResultados = document.getElementById("divResultados");
-            const totalSpan = document.getElementById("totalResultados");
-
-            tabla.innerHTML = "";
-            divResultados.style.display = "block";
-            totalSpan.textContent = data.total || 0;
-
-            if (!data.hits || data.hits.length === 0) {
-                tabla.innerHTML =
-                    <tr><td colspan="5" class="text-center">No se encontraron resultados</td></tr>;
-                return;
-            }
-
-            data.hits.forEach(hit => {
-
-                const d = hit._source || {};
-
-                const anio    = d.anio || "-";
-                const semana  = d.semana_epidemiologica || "-";
-                const tema    = d.tema_central || "(Sin tema)";
-                const pub     = d.publicacion_en_linea || "(Sin enlace)";
-                const pdf     = d.pdf_url || null;
-
-                const fila = `
-                    <tr>
-                        <td>${anio}</td>
-                        <td>${semana}</td>
-                        <td>${tema}</td>
-                        <td>${pub}</td>
-                        <td class="text-center">
-                            ${pdf 
-                                ? <a href="${pdf}" target="_blank" class="btn btn-sm btn-primary pdf-btn">PDF</a>
-                                : <span class="text-muted">N/A</span>}
-                        </td>
-                    </tr>
-                `;
-
-                tabla.insertAdjacentHTML("beforeend", fila);
-            });
-
-        })
-        .catch(err => {
-            console.error(err);
-            alert("Error al buscar en Elastic");
-        });
+    if (!texto && !anio && !semana) {
+      alert("Debes ingresar al menos texto, año o semana.");
+      return;
     }
+
+    const payload = { texto, anio, semana };
+
+    fetch("/buscar-elastic", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+      console.log("RESP BUSCADOR:", data);
+
+      if (!data.success) {
+        alert("Error en la búsqueda: " + (data.error || "Error desconocido"));
+        return;
+      }
+
+      const divResultados = document.getElementById("divResultados");
+      const tabla         = document.getElementById("tablaResultados");
+      const totalSpan     = document.getElementById("totalResultados");
+
+      divResultados.style.display = "block";
+      tabla.innerHTML = "";
+      totalSpan.textContent = data.total || 0;
+
+      if (!data.hits || data.hits.length === 0) {
+        tabla.innerHTML = '<tr><td colspan="7" class="text-center">No se encontraron resultados</td></tr>';
+        return;
+      }
+
+      data.hits.forEach(hit => {
+        const d = hit._source || {};
+
+        const anio    = d.anio ?? "-";
+        const semana  = d.semana_epidemiologica ?? "-";
+        const rango   = d.rango_fechas ?? "-";
+        const tema    = d.tema_central ?? "(Sin tema)";
+        const pub     = d.publicacion_en_linea ?? "(Sin información)";
+        const temas   = Array.isArray(d.temas_portada) ? d.temas_portada.join(", ") : (d.temas_portada || "-");
+        const pdf     = d.pdf_url || null;
+
+        const fila = `
+          <tr>
+            <td>${anio}</td>
+            <td>${semana}</td>
+            <td>${rango}</td>
+            <td>${tema}</td>
+            <td>${pub}</td>
+            <td>${temas}</td>
+            <td class="text-center">
+              ${pdf
+                ? <a href="${pdf}" target="_blank" class="btn btn-sm btn-primary pdf-btn">Ver PDF</a>
+                : <span class="text-muted">N/A</span>}
+            </td>
+          </tr>
+        `;
+        tabla.insertAdjacentHTML("beforeend", fila);
+      });
+
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error al consultar Elastic (revisa consola del navegador).");
+    });
+  }
 </script>
 {% endblock %}
