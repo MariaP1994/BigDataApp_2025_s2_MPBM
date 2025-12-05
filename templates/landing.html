@@ -91,74 +91,70 @@
 
 {% block content %}
 
-<div class="container py-5">
+<div class="hero-container">
 
-    <div class="hero-container">
+    <!-- TEXT SECTION -->
+    <div style="max-width: 520px;">
+        <h1 class="hero-title">
+            Proyecto BigData MPBM
+        </h1>
 
-        <!-- TEXT SECTION -->
-        <div style="max-width: 520px;">
-            <h1 class="hero-title">
-                Proyecto BigData MPBM
-            </h1>
+        <p class="hero-sub">
+            Aplicación web desarrollada por <b>María Paula Barrero Montealegre</b><br>
+            como parte de la Maestría en Analítica de Datos – Universidad Central.<br><br>
+            Explora, busca, visualiza e interpreta datos reales usando MongoDB y ElasticSearch.
+        </p>
 
-            <p class="hero-sub">
-                Aplicación web desarrollada por <b>María Paula Barrero Montealegre</b><br>
-                como parte de la Maestría en Analítica de Datos – Universidad Central.<br><br>
-                Explora, busca, visualiza e interpreta datos reales usando MongoDB y ElasticSearch.
-            </p>
+        <a href="/login" class="btn btn-primary btn-start">
+            <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar al sistema
+        </a>
+    </div>
 
-            <a href="/login" class="btn btn-primary btn-start">
-                <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar al sistema
-            </a>
+    <!-- IMAGE SECTION -->
+    <div>
+        <img src="{{ url_for('static', filename='images/creador.png') }}"
+             class="maria-photo"
+             alt="Foto de María Paula Barrero">
+    </div>
+
+</div>
+
+
+<!-- FEATURE CARDS -->
+<div class="feature-section">
+
+    <h3 class="mb-4">¿Qué puedes hacer dentro del proyecto?</h3>
+
+    <div class="row g-4">
+
+        <div class="col-md-4">
+            <div class="feature-box">
+                <div class="feature-title"><i class="bi bi-search me-1"></i> Buscador Elastic</div>
+                <p>
+                    Realiza consultas inteligentes, analiza documentos y explora agregaciones avanzadas para descubrir insights.
+                </p>
+            </div>
         </div>
 
-        <!-- IMAGE SECTION -->
-        <div>
-            <img src="{{ url_for('static', filename='Images/creador.png') }}"
-                 class="maria-photo"
-                 alt="Foto de María Paula Barrero">
+        <div class="col-md-4">
+            <div class="feature-box">
+                <div class="feature-title"><i class="bi bi-database me-1"></i> Gestión MongoDB</div>
+                <p>
+                    Administra usuarios, colecciones y seguridad de manera centralizada usando acceso controlado por roles.
+                </p>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="feature-box">
+                <div class="feature-title"><i class="bi bi-cloud-upload me-1"></i> Carga de datos</div>
+                <p>
+                    Importa ZIP con JSON, indexa documentos o ejecuta scraping automático para poblar ElasticSearch.
+                </p>
+            </div>
         </div>
 
     </div>
-
-
-    <!-- FEATURE CARDS -->
-    <div class="feature-section">
-
-        <h3 class="mb-4">¿Qué puedes hacer dentro del proyecto?</h3>
-
-        <div class="row g-4">
-
-            <div class="col-md-4">
-                <div class="feature-box">
-                    <div class="feature-title"><i class="bi bi-search me-1"></i> Buscador Elastic</div>
-                    <p>
-                        Realiza consultas inteligentes, analiza documentos y explora agregaciones avanzadas para descubrir insights.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="feature-box">
-                    <div class="feature-title"><i class="bi bi-database me-1"></i> Gestión MongoDB</div>
-                    <p>
-                        Administra usuarios, colecciones y seguridad de manera centralizada usando acceso controlado por roles.
-                    </p>
-                </div>
-            </div>
-
-            <div class="col-md-4">
-                <div class="feature-box">
-                    <div class="feature-title"><i class="bi bi-cloud-upload me-1"></i> Carga de datos</div>
-                    <p>
-                        Importa ZIP con JSON, indexa documentos o ejecuta scraping automático para poblar ElasticSearch.
-                    </p>
-                </div>
-            </div>
-
-        </div>
-    </div>
-
 </div>
 
 {% endblock %}

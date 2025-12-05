@@ -1,8 +1,32 @@
 import os
 import json
 from dotenv import load_dotenv
-
 from Helpers.elastic import ElasticSearch
+
+
+def limpiar_documento(doc: dict) -> dict:
+    """
+    Limpia campos None y asegura formato correcto.
+    También genera un _id basado en año + semana si aplica.
+    """
+    limpio = {k: v for k, v in doc.items() if v not in (None, "", [], {})}
+
+    # Asegurar que "anio" quede como int
+    if "anio" in limpio:
+        try:
+            limpio["anio"] = int(limpio["anio"])
+        except:
+            pass
+
+    # Asegurar que "semana_epidemiologica" quede como string para Elastic
+    if "semana_epidemiologica" in limpio:
+        limpio["semana_epidemiologica"] = str(limpio["semana_epidemiologica"])
+
+    # Generar ID único si el PDF viene de boletín
+    if "anio" in limpio and "semana_epidemiologica" in limpio:
+        limpio["_id"] = f"{limpio['anio']}-SEM-{limpio['semana_epidemiologica']}"
+
+    return limpio
 
 
 if __name__ == "__main__":
@@ -23,59 +47,60 @@ if __name__ == "__main__":
         default_index=ELASTIC_INDEX_DEFAULT,
     )
 
-    # Probar conexión
     print("\nProbando conexión a ElasticSearch...")
     if not es.test_connection():
-        print("No se pudo conectar a ElasticSearch. Revisa URL o API KEY en env.txt")
+        print("No se pudo conectar a ElasticSearch.")
         raise SystemExit(1)
     else:
-        print("Conectado a ElasticSearch")
+        print("Conectado a ElasticSearch correctamente.")
 
     # ================== CARPETA CON LOS JSON ==================
-    json_dir = os.path.join("data") 
+    json_dir = os.path.join("data")
 
     print("\nUsando carpeta:", os.path.abspath(json_dir))
     print("Índice destino:", ELASTIC_INDEX_DEFAULT)
 
     if not os.path.isdir(json_dir):
-        print("La carpeta de JSON no existe. Revisa la ruta:", json_dir)
+        print("La carpeta de JSON no existe:", json_dir)
         raise SystemExit(1)
 
     # ================== CARGAR DOCUMENTOS DESDE LOS JSON ==================
     documentos = []
 
-    for filename in os.listdir(json_dir):
+    for filename in sorted(os.listdir(json_dir)):
         if not filename.lower().endswith(".json"):
             continue
 
         ruta_archivo = os.path.join(json_dir, filename)
-        print(f" Leyendo: {ruta_archivo}")
+        print(f"Leyendo: {ruta_archivo}")
 
         try:
             with open(ruta_archivo, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-                # Si el JSON es una lista de docs, los agregamos todos
-                if isinstance(data, list):
-                    documentos.extend(data)
-                # Si es un solo documento, lo agregamos
-                elif isinstance(data, dict):
-                    documentos.append(data)
-                else:
-                    print(f"⚠ Formato no reconocido en {filename}: {type(data)}")
+            # DEPENDIENDO DE TU WEBSCRAPING, cada JSON es *un documento*
+            if isinstance(data, dict):
+                doc = limpiar_documento(data)
+                documentos.append(doc)
+            else:
+                print(f"Formato no reconocido en {filename}. Se omite.")
 
         except Exception as e:
             print(f"Error leyendo {filename}: {e}")
 
-    print(f"\nTotal de documentos preparados para indexar: {len(documentos)}")
+    print(f"\nDocumentos preparados para indexar: {len(documentos)}")
 
     if not documentos:
-        print("⚠ No hay documentos para indexar. Revisa el contenido de la carpeta de JSON.")
+        print("No hay documentos válidos para indexar.")
         raise SystemExit(0)
 
     # ================== INDEXAR EN ELASTIC (BULK) ==================
-    print("\nIndexando documentos en ElasticSearch...")
-    resultado = es.indexar_bulk(documentos=documentos, index=ELASTIC_INDEX_DEFAULT)
+    print("\n Indexando documentos en ElasticSearch...")
 
-    print("\nResultado indexación:")
+    resultado = es.indexar_bulk(
+        documentos=documentos,
+        index=ELASTIC_INDEX_DEFAULT,
+    )
+
+    print("\nResultado de indexación:")
     print(resultado)

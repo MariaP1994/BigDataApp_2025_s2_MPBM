@@ -219,11 +219,14 @@
                             } else {
                                 estadoBadge = '<span class="badge bg-secondary">Cerrado</span>';
                             }
+
+                            // 🔴 AQUÍ ESTABA EL PROBLEMA CON LA Ñ
+                            const sizeText = indice.tamano ?? indice["tamaño"] ?? '0b';
                             
                             row.innerHTML = `
                                 <td><strong>${indice.nombre || ''}</strong></td>
                                 <td>${indice.total_documentos || 0}</td>
-                                <td>${indice.tamaño || '0b'}</td>
+                                <td>${sizeText}</td>
                                 <td>${saludBadge}</td>
                                 <td>${estadoBadge}</td>
                             `;
@@ -371,4 +374,3 @@
     </script>
 </body>
 </html>
-

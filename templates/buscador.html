@@ -1,7 +1,9 @@
 {% block extra_js %}
 <script>
+    // Guardamos los últimos hits para el modal
     let ultimaBusqueda = [];
 
+    // ---------- BUSCAR ----------
     function buscar(event) {
         event.preventDefault();
 
@@ -30,8 +32,8 @@
                 tipo_archivo: tipo || null
             })
         })
-        .then(r => r.json())
-        .then(data => {
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
             document.getElementById("div_cargando").style.display = "none";
 
             if (!data.success) {
@@ -41,13 +43,14 @@
 
             mostrarResultados(data);
         })
-        .catch(err => {
+        .catch(function (err) {
             console.error(err);
             document.getElementById("div_cargando").style.display = "none";
             mostrarError("Error en la conexión.");
         });
     }
 
+    // ---------- MOSTRAR RESULTADOS ----------
     function mostrarResultados(data) {
         document.getElementById("totalResultados").textContent = data.total || 0;
 
@@ -58,6 +61,7 @@
         document.getElementById("divResultados").style.display = "block";
     }
 
+    // ---------- AGGREGATIONS (opcional) ----------
     function mostrarAggregations(aggs) {
         const cont = document.getElementById("divAggregations");
         cont.innerHTML = "";
@@ -67,16 +71,22 @@
             return;
         }
 
-        for (const [nombre, agg] of Object.entries(aggs)) {
+        Object.entries(aggs).forEach(function (entry) {
+            const nombre = entry[0];
+            const agg    = entry[1];
+
             const div = document.createElement("div");
             div.className = "aggs-item";
             div.innerHTML =
-                `<h6>${nombre}</h6>
-                 <pre class="json-view mb-0">${JSON.stringify(agg, null, 2)}</pre>`;
+                "<h6>" + nombre + "</h6>" +
+                "<pre class='json-view mb-0'>" +
+                JSON.stringify(agg, null, 2) +
+                "</pre>";
             cont.appendChild(div);
-        }
+        });
     }
 
+    // ---------- TABLA DE HITS ----------
     function mostrarHits(hits) {
         const tabla = document.getElementById("tablaResultados");
         tabla.innerHTML = "";
@@ -87,7 +97,7 @@
             return;
         }
 
-        hits.forEach((hit, i) => {
+        hits.forEach(function (hit, i) {
             const src = hit._source || {};
 
             const semana = src.semana_epidemiologica || "N/D";
@@ -96,32 +106,31 @@
             const publi  = src.publicacion_en_linea || "";
             const pdfUrl = src.pdf_url || "";
 
-            let temasPortadaTexto = "";
+            var temasPortadaTexto = "";
             if (Array.isArray(src.temas_portada) && src.temas_portada.length > 0) {
                 temasPortadaTexto = src.temas_portada.join(" · ");
             } else if (typeof src.temas_portada === "string" && src.temas_portada.trim() !== "") {
                 temasPortadaTexto = src.temas_portada;
             }
 
-            let resumenHtml = `
-                <strong>Semana epidemiológica:</strong> ${semana}<br>
-                <strong>Rango de fechas:</strong> ${rango}<br>
-                <strong>Tema central:</strong> ${tema}
-            `;
+            var resumenHtml = "";
+            resumenHtml += "<strong>Semana epidemiológica:</strong> " + semana + "<br>";
+            resumenHtml += "<strong>Rango de fechas:</strong> " + rango + "<br>";
+            resumenHtml += "<strong>Tema central:</strong> " + tema;
 
             if (temasPortadaTexto) {
-                resumenHtml += `<br><strong>Temas de portada:</strong> ${temasPortadaTexto}`;
+                resumenHtml += "<br><strong>Temas de portada:</strong> " + temasPortadaTexto;
             }
 
             if (publi) {
-                resumenHtml += `<br><strong>Publicación en línea:</strong> ${publi}`;
+                resumenHtml += "<br><strong>Publicación en línea:</strong> " + publi;
             }
 
             if (pdfUrl) {
-                resumenHtml += `<br><strong>PDF:</strong> 
-                    <a href="${pdfUrl}" target="_blank" rel="noopener noreferrer">
-                        Abrir boletín
-                    </a>`;
+                resumenHtml += "<br><strong>PDF:</strong> " +
+                    "<a href='" + pdfUrl + "' target='_blank' rel='noopener noreferrer'>" +
+                    "Abrir boletín" +
+                    "</a>";
             }
 
             const row = document.createElement("tr");
@@ -133,7 +142,8 @@
                 "<td>" +
                     "<div class='json-view mb-1'>" + resumenHtml + "</div>" +
                     "<button class='btn btn-link btn-link-detalle text-info' " +
-                        "onclick='mostrarDetalle(" + i + ")' data-bs-toggle='modal' data-bs-target='#modalDetalle'>" +
+                        "onclick='mostrarDetalle(" + i + ")' " +
+                        "data-bs-toggle='modal' data-bs-target='#modalDetalle'>" +
                         "<i class='bi bi-arrows-angle-expand me-1'></i>Ver JSON completo" +
                     "</button>" +
                 "</td>";
@@ -142,11 +152,13 @@
         });
     }
 
+    // ---------- ERROR ----------
     function mostrarError(msg) {
         document.getElementById("mensajeError").textContent = msg;
         document.getElementById("divError").style.display = "block";
     }
 
+    // ---------- MODAL DETALLE ----------
     function mostrarDetalle(i) {
         const hit = ultimaBusqueda[i];
         if (!hit) return;

@@ -23,8 +23,6 @@ MONGO_COLECCION = os.getenv("MONGO_COLECCION") or "usuario_roles"
 
 ELASTIC_CLOUD_URL     = os.getenv("ELASTIC_CLOUD_URL")
 ELASTIC_API_KEY       = os.getenv("ELASTIC_API_KEY")
-
-# Índice por defecto para los boletines en Elastic
 ELASTIC_INDEX_DEFAULT = os.getenv("ELASTIC_INDEX_DEFAULT") or "index-boletin-semanal"
 
 app.secret_key = os.getenv("SECRET_KEY") or "Mpbm1234"
@@ -40,7 +38,7 @@ print("DEBUG ELASTIC_CLOUD_URL:", repr(ELASTIC_CLOUD_URL))
 print("DEBUG ELASTIC_INDEX_DEFAULT:", repr(ELASTIC_INDEX_DEFAULT))
 
 # ================= INICIALIZAR CONEXIONES =================
-mongo   = MongoDB(MONGO_URI, MONGO_DB)
+mongo = MongoDB(MONGO_URI, MONGO_DB)
 elastic = ElasticSearch(
     cloud_url=ELASTIC_CLOUD_URL,
     api_key=ELASTIC_API_KEY,
@@ -85,15 +83,14 @@ def buscar_elastic():
         data = request.get_json()
         texto_buscar = (data.get("texto") or "").strip()
 
-        # Filtros opcionales que manda el front (año, semana, tipo_archivo)
-        anio_filtro    = data.get("anio")
-        semana_filtro  = data.get("semana")
-        tipo_archivo   = data.get("tipo_archivo")
+        anio_filtro   = data.get("anio")
+        semana_filtro = data.get("semana")
+        tipo_archivo  = data.get("tipo_archivo")
 
         if not texto_buscar:
             return jsonify({"success": False, "error": "Texto requerido"}), 400
 
-        # Query principal: texto libre sobre varios campos
+        # Query principal
         query_base = {
             "bool": {
                 "must": [
@@ -102,21 +99,21 @@ def buscar_elastic():
                             "query": texto_buscar,
                             "fields": [
                                 "tema_central^3",
-                                "temas_portada^2",      # 👈 títulos de portada
+                                "temas_portada^2",
                                 "semana_epidemiologica",
                                 "rango_fechas",
                                 "expertos_tematicos",
                                 "publicacion_en_linea",
-                                "_all"
-                            ]
+                                "_all",
+                            ],
                         }
                     }
                 ],
-                "filter": []
+                "filter": [],
             }
         }
 
-        # Filtro por año (campo 'anio' que metimos en el JSON)
+        # Filtros
         if anio_filtro:
             try:
                 anio_int = int(anio_filtro)
@@ -124,7 +121,6 @@ def buscar_elastic():
             except ValueError:
                 pass
 
-        # Filtro por semana
         if semana_filtro:
             try:
                 semana_int = int(semana_filtro)
@@ -134,27 +130,25 @@ def buscar_elastic():
             except ValueError:
                 pass
 
-        # Filtro por tipo de archivo (en tu JSON: tipo_archivo = "pdf")
         if tipo_archivo:
             query_base["bool"]["filter"].append(
                 {"term": {"tipo_archivo.keyword": tipo_archivo}}
             )
 
-        # Agregaciones de ejemplo (puedes extenderlas luego)
         aggs = {
             "boletines_por_anio": {
                 "terms": {"field": "anio", "size": 20}
             },
             "boletines_por_tema_portada": {
                 "terms": {"field": "temas_portada.keyword", "size": 20}
-            }
+            },
         }
 
         resultado = elastic.buscar(
             index=ELASTIC_INDEX_DEFAULT,
             query={"query": query_base},
             aggs=aggs,
-            size=100
+            size=100,
         )
 
         return jsonify(resultado)
@@ -176,7 +170,7 @@ def login():
             session["permisos"] = {
                 "admin_usuarios": True,
                 "admin_elastic": True,
-                "admin_data_elastic": True
+                "admin_data_elastic": True,
             }
             session["logged_in"] = True
             flash("Inicio exitoso", "success")
@@ -186,7 +180,7 @@ def login():
         user_data = mongo.validar_usuario(usuario, password, MONGO_COLECCION)
 
         if user_data:
-            session["usuario"]  = usuario
+            session["usuario"] = usuario
             session["permisos"] = user_data.get("permisos", {})
             session["logged_in"] = True
             flash("Inicio exitoso", "success")
@@ -197,7 +191,7 @@ def login():
     return render_template(
         "login.html",
         version=VERSION_APP,
-        creador=CREATOR_APP
+        creador=CREATOR_APP,
     )
 
 
@@ -220,14 +214,13 @@ def admin():
         usuario=session.get("usuario"),
         permisos=session.get("permisos"),
         version=VERSION_APP,
-        creador=CREATOR_APP
+        creador=CREATOR_APP,
     )
 
-# ==================== USUARIOS (API + GESTOR) ====================
+# ==================== USUARIOS ====================
 
 @app.route("/listar-usuarios")
 def listar_usuarios():
-    """Devuelve los usuarios en JSON (para debug / API)."""
     try:
         usuarios = mongo.listar_usuarios(MONGO_COLECCION)
         for u in usuarios:
@@ -239,10 +232,6 @@ def listar_usuarios():
 
 @app.route("/gestor_usuarios")
 def gestor_usuarios():
-    """
-    Vista HTML para administrar usuarios.
-    Este es el endpoint que usa admin.html con url_for('gestor_usuarios')
-    """
     if not session.get("logged_in"):
         flash("Inicia sesión", "warning")
         return redirect(url_for("login"))
@@ -257,10 +246,53 @@ def gestor_usuarios():
         usuario=session.get("usuario"),
         permisos=permisos,
         version=VERSION_APP,
-        creador=CREATOR_APP
+        creador=CREATOR_APP,
+    )
+
+# ==================== ELASTIC: GESTOR ====================
+
+@app.route("/gestor_elastic")
+def gestor_elastic():
+    if not session.get("logged_in"):
+        flash("Inicia sesión", "warning")
+        return redirect(url_for("login"))
+
+    permisos = session.get("permisos", {})
+    if not permisos.get("admin_elastic"):
+        flash("No tiene permisos", "danger")
+        return redirect(url_for("admin"))
+
+    return render_template(
+        "gestor_elastic.html",
+        usuario=session.get("usuario"),
+        permisos=permisos,
+        version=VERSION_APP,
+        creador=CREATOR_APP,
+    )
+
+# ==================== ELASTIC: CARGA DE DATOS ====================
+
+@app.route("/cargar_doc_elastic")
+def cargar_doc_elastic():
+    if not session.get("logged_in"):
+        flash("Inicia sesión", "warning")
+        return redirect(url_for("login"))
+
+    permisos = session.get("permisos", {})
+    if not permisos.get("admin_data_elastic"):
+        flash("No tiene permisos", "danger")
+        return redirect(url_for("admin"))
+
+    return render_template(
+        "documentos_elastic.html",
+        usuario=session.get("usuario"),
+        permisos=permisos,
+        version=VERSION_APP,
+        creador=CREATOR_APP,
     )
 
 # ==================== MAIN ====================
+
 if __name__ == "__main__":
     Funciones.crear_carpeta("static/uploads")
 
@@ -268,13 +300,13 @@ if __name__ == "__main__":
     print("VERIFICANDO CONEXIONES")
 
     if mongo.test_connection():
-        print("✅ MongoDB Atlas OK")
+        print("MongoDB Atlas OK")
     else:
-        print("❌ Error MongoDB")
+        print("Error MongoDB")
 
     if elastic.test_connection():
-        print("✅ ElasticSearch Cloud OK")
+        print("ElasticSearch Cloud OK")
     else:
-        print("❌ Error ElasticSearch")
+        print("Error ElasticSearch")
 
     app.run(debug=True, host="0.0.0.0", port=5000)

@@ -9,7 +9,7 @@ class MongoDB:
         Inicializa la conexión a MongoDB.
 
         Args:
-            uri: cadena de conexión a MongoDB (MongoDB Atlas)
+            uri: cadena de conexión a MongoDB (por ejemplo MongoDB Atlas)
             db_name: nombre de la base de datos
         """
         if not uri:
@@ -19,7 +19,7 @@ class MongoDB:
         self.db = self.client[db_name]
 
     def test_connection(self) -> bool:
-        """Prueba la conexión a MongoDB."""
+        """Prueba la conexión a MongoDB (ping a la base admin)."""
         try:
             self.client.admin.command("ping")
             return True
@@ -29,7 +29,11 @@ class MongoDB:
 
     def validar_usuario(self, usuario: str, password: str, coleccion: str) -> Optional[Dict]:
         """
+        Valida un usuario contra la colección dada.
 
+        Busca un documento con:
+            {"usuario": <usuario>, "password": <password>}
+        y devuelve el documento completo si existe, o None si no.
         """
         try:
             user = self.db[coleccion].find_one({
@@ -50,7 +54,7 @@ class MongoDB:
             return None
 
     def listar_usuarios(self, coleccion: str) -> List[Dict]:
-        """Lista todos los usuarios."""
+        """Lista todos los usuarios de la colección."""
         try:
             return list(self.db[coleccion].find({}))
         except Exception as e:
@@ -58,7 +62,7 @@ class MongoDB:
             return []
 
     def crear_usuario(self, usuario: str, password: str, permisos: Dict, coleccion: str) -> bool:
-        """Crea un nuevo usuario."""
+        """Crea un nuevo usuario con permisos."""
         try:
             documento = {
                 "usuario": usuario,
@@ -84,7 +88,7 @@ class MongoDB:
             return False
 
     def eliminar_usuario(self, usuario: str, coleccion: str) -> bool:
-        """Elimina un usuario."""
+        """Elimina un usuario por 'usuario'."""
         try:
             resultado = self.db[coleccion].delete_one({"usuario": usuario})
             return resultado.deleted_count > 0
@@ -93,5 +97,5 @@ class MongoDB:
             return False
 
     def close(self):
-        """Cierra la conexión."""
+        """Cierra la conexión al cliente Mongo."""
         self.client.close()

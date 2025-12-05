@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Gestor de ElasticSearch - BigData-MiProyecto{% endblock %}
+{% block title %}Gestor de Usuarios - BigData-MiProyecto{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -112,11 +112,11 @@
 <!-- CABECERA DE LA PÁGINA -->
 <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
     <div>
-        <div class="step-pill">Módulo avanzado · ElasticSearch</div>
-        <h1 class="mb-1">Gestión de índices y consultas</h1>
+        <div class="step-pill">Módulo avanzado</div>
+        <h1 class="mb-1">Gestor de Usuarios / Elastic</h1>
         <p class="page-subtitle mb-0">
-            Desde este panel puedes revisar el estado de los índices de ElasticSearch, monitorear su salud
-            y ejecutar consultas o comandos JSON para explorar o modificar datos de forma controlada.
+            Desde este panel puedes inspeccionar la información almacenada en ElasticSearch usando queries JSON
+            y ejecutar comandos controlados. (Más adelante se podría adaptar para ver y administrar usuarios de Mongo).
         </p>
     </div>
     <div class="text-end">
@@ -195,7 +195,7 @@
             <textarea class="form-control" id="queryTextarea" name="query" rows="10" required
                       placeholder='Ejemplo QUERY:
 {
-  "index": "indice-boletin-semanal",
+  "index": "index-boletin-semanal",
   "query": {
     "match_all": {}
   },
@@ -205,7 +205,7 @@
 Ejemplo DML:
 {
   "operacion": "index",
-  "index": "indice-boletin-semanal",
+  "index": "index-boletin-semanal",
   "id": "1",
   "documento": {
     "campo": "valor"
@@ -310,7 +310,6 @@ Ejemplo DML:
                     data.forEach(indice => {
                         const row = document.createElement('tr');
 
-                        // Badge salud
                         const salud = indice.salud || 'unknown';
                         let saludBadge = '';
                         if (salud === 'green') {
@@ -323,7 +322,6 @@ Ejemplo DML:
                             saludBadge = '<span class="badge-soft-muted">Desconocido</span>';
                         }
 
-                        // Badge estado
                         const estado = indice.estado || 'unknown';
                         let estadoBadge = '';
                         if (estado === 'open') {
@@ -332,10 +330,13 @@ Ejemplo DML:
                             estadoBadge = '<span class="badge-soft-muted">Cerrado</span>';
                         }
 
+                        // 🔴 AQUÍ CORREGIMOS EL TEMA DE "tamaño"
+                        const sizeText = indice.tamano ?? indice["tamaño"] ?? '0b';
+
                         row.innerHTML = `
                             <td><strong>${indice.nombre || ''}</strong></td>
                             <td>${indice.total_documentos || 0}</td>
-                            <td>${indice.tamaño || '0b'}</td>
+                            <td>${sizeText}</td>
                             <td>${saludBadge}</td>
                             <td>${estadoBadge}</td>
                         `;
